@@ -44,7 +44,6 @@ export default function Simulation() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col h-screen overflow-hidden text-slate-200">
-      {/* Header */}
       <header className="h-16 border-b border-white/10 bg-card/50 flex items-center justify-between px-6 z-20 shrink-0">
         <div className="flex items-center gap-6">
           <Button variant="ghost" size="icon" onClick={() => setLocation('/')}>
@@ -87,10 +86,7 @@ export default function Simulation() {
         </div>
       </header>
 
-      {/* Main Content Grid */}
       <div className="flex-1 grid grid-cols-12 gap-6 p-6 overflow-hidden">
-        
-        {/* Left Panel: Controls */}
         <div className="col-span-3 flex flex-col h-full overflow-hidden">
           <ScrollArea className="flex-1 pr-4">
             <EnvironmentalControls 
@@ -119,7 +115,6 @@ export default function Simulation() {
           </ScrollArea>
         </div>
 
-        {/* Center: Visuals */}
         <div className="col-span-6 flex flex-col gap-6 h-full overflow-hidden">
           <div className="flex-1 relative overflow-hidden bg-slate-950/20 rounded-2xl border border-white/5">
             <AnimatePresence>
@@ -139,7 +134,6 @@ export default function Simulation() {
             <GlacierCanvas stats={state.glacierStats} />
           </div>
 
-          {/* Bottom Chart */}
           <div className="h-40 bg-card/50 rounded-xl border border-white/10 p-4 shrink-0">
             <h4 className="text-[10px] font-bold uppercase text-muted-foreground mb-2 tracking-widest">Mass vs Temperature History</h4>
             <ResponsiveContainer width="100%" height="100%">
@@ -179,7 +173,6 @@ export default function Simulation() {
           </div>
         </div>
 
-        {/* Right Panel: Stats */}
         <div className="col-span-3 flex flex-col h-full overflow-hidden">
           <ScrollArea className="flex-1 pr-4">
             <div className="space-y-4">

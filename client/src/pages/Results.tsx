@@ -18,8 +18,6 @@ export default function Results() {
   
   const yearsSurvived = year - 2024;
   
-  // New weighted scoring logic
-  // (years * 10) + (finalVolume / 100) + (finalStability * 5) + (finalThickness / 10)
   const score = Math.max(0, Math.floor(
     (yearsSurvived * 10) + 
     (finalVolume / 100) + 
@@ -97,7 +95,6 @@ export default function Results() {
             <Button 
               className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" 
               onClick={() => {
-                // Clear any local state if needed and redirect
                 setLocation('/');
               }}
             >
