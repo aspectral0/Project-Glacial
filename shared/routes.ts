@@ -63,6 +63,30 @@ export const api = {
       },
     },
   },
+  ai: {
+    predict: {
+      method: 'POST' as const,
+      path: '/api/predict',
+      input: z.object({
+        glacierName: z.string(),
+        stats: z.object({
+          thickness: z.number(),
+          stability: z.number(),
+          volume: z.number(),
+        }),
+        environment: z.object({
+          globalTemp: z.number(),
+          snowfall: z.number(),
+          emissions: z.number(),
+          oceanTemp: z.number(),
+        }),
+      }),
+      responses: {
+        200: z.object({ prediction: z.string() }),
+        400: errorSchemas.validation,
+      },
+    },
+  },
 };
 
 // ============================================
@@ -84,3 +108,5 @@ export function buildUrl(path: string, params?: Record<string, string | number>)
 export type ScoreInput = z.infer<typeof api.scores.create.input>;
 export type ScoreResponse = z.infer<typeof api.scores.create.responses[201]>;
 export type GlaciersListResponse = z.infer<typeof api.glaciers.list.responses[200]>;
+export type PredictInput = z.infer<typeof api.ai.predict.input>;
+export type PredictResponse = z.infer<typeof api.ai.predict.responses[200]>;
