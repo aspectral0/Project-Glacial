@@ -1,4 +1,4 @@
-import { type User, type InsertUser, glaciers, scores, type Glacier, type Score, type InsertScore } from "@shared/schema";
+import { glaciers, scores, type Glacier, type Score, type InsertScore } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
