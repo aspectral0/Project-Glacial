@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -13,13 +13,14 @@ export const glaciers = pgTable("glaciers", {
   iceThickness: integer("ice_thickness").notNull(), // meters
   surfaceArea: integer("surface_area").notNull(), // sq km
   stability: integer("stability").notNull(), // 0-100%
-  tempSensitivity: integer("temp_sensitivity").notNull(), // 1-10 scale (higher = melts faster)
-  // Hidden/Drillable Data stored as JSON
+  tempSensitivity: integer("temp_sensitivity").notNull(), // 1-10 scale
+  // Hidden/Drillable Data
   drillData: jsonb("drill_data").$type<{
     historicalTemp: number[];
     co2Levels: number[];
     layerStrength: number[];
   }>().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Leaderboard/History
@@ -28,14 +29,16 @@ export const scores = pgTable("scores", {
   glacierName: text("glacier_name").notNull(),
   yearsSurvived: integer("years_survived").notNull(),
   finalIceVolume: integer("final_ice_volume").notNull(),
+  finalStability: integer("final_stability").notNull(),
+  finalThickness: integer("final_thickness").notNull(),
   score: integer("score").notNull(),
-  playedAt: text("played_at").notNull(), // ISO string
+  playedAt: timestamp("played_at").defaultNow(),
 });
 
 // === SCHEMAS ===
 
-export const insertGlacierSchema = createInsertSchema(glaciers);
-export const insertScoreSchema = createInsertSchema(scores);
+export const insertGlacierSchema = createInsertSchema(glaciers).omit({ id: true, createdAt: true });
+export const insertScoreSchema = createInsertSchema(scores).omit({ id: true, playedAt: true });
 
 // === TYPES ===
 
@@ -44,12 +47,12 @@ export type InsertGlacier = z.infer<typeof insertGlacierSchema>;
 export type Score = typeof scores.$inferSelect;
 export type InsertScore = z.infer<typeof insertScoreSchema>;
 
-// Simulation State Types (for frontend)
+// Simulation State Types
 export interface SimulationState {
   year: number;
   isRunning: boolean;
   isGameOver: boolean;
-  health: number; // 0-100
+  health: number;
   glacierStats: {
     thickness: number;
     area: number;
@@ -57,9 +60,9 @@ export interface SimulationState {
     volume: number;
   };
   environmentalFactors: {
-    globalTemp: number; // offset in C
-    snowfall: number; // multiplier 0-2
-    emissions: number; // multiplier 0-2
-    oceanTemp: number; // offset in C
+    globalTemp: number;
+    snowfall: number;
+    emissions: number;
+    oceanTemp: number;
   };
 }

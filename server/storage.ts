@@ -1,19 +1,12 @@
+import { type User, type InsertUser, glaciers, scores, type Glacier, type Score, type InsertScore } from "@shared/schema";
 import { db } from "./db";
-import {
-  glaciers,
-  scores,
-  type Glacier,
-  type InsertGlacier,
-  type Score,
-  type InsertScore,
-} from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Glaciers
   getGlaciers(): Promise<Glacier[]>;
   getGlacier(id: number): Promise<Glacier | undefined>;
-  createGlacier(glacier: InsertGlacier): Promise<Glacier>;
+  createGlacier(glacier: any): Promise<Glacier>;
 
   // Scores
   getScores(): Promise<Score[]>;
@@ -34,14 +27,13 @@ export class DatabaseStorage implements IStorage {
     return glacier;
   }
 
-  async createGlacier(glacier: InsertGlacier): Promise<Glacier> {
+  async createGlacier(glacier: any): Promise<Glacier> {
     const [newGlacier] = await db.insert(glaciers).values(glacier).returning();
     return newGlacier;
   }
 
   // Scores
   async getScores(): Promise<Score[]> {
-    // Return top 10 scores
     return await db
       .select()
       .from(scores)

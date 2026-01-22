@@ -1,5 +1,21 @@
 import { z } from 'zod';
-import { insertScoreSchema, glaciers, scores } from './schema';
+import { glaciers, scores } from './schema';
+
+// ============================================
+// SHARED ERROR SCHEMAS
+// ============================================
+export const errorSchemas = {
+  validation: z.object({
+    message: z.string(),
+    field: z.string().optional(),
+  }),
+  notFound: z.object({
+    message: z.string(),
+  }),
+  internal: z.object({
+    message: z.string(),
+  }),
+};
 
 // ============================================
 // API CONTRACT
@@ -18,7 +34,7 @@ export const api = {
       path: '/api/glaciers/:id',
       responses: {
         200: z.custom<typeof glaciers.$inferSelect>(),
-        404: z.object({ message: z.string() }),
+        404: errorSchemas.notFound,
       },
     },
   },
@@ -33,17 +49,24 @@ export const api = {
     create: {
       method: 'POST' as const,
       path: '/api/scores',
-      input: insertScoreSchema,
+      input: z.object({
+        glacierName: z.string(),
+        yearsSurvived: z.number(),
+        finalIceVolume: z.number(),
+        finalStability: z.number(),
+        finalThickness: z.number(),
+        score: z.number(),
+      }),
       responses: {
         201: z.custom<typeof scores.$inferSelect>(),
-        400: z.object({ message: z.string() }),
+        400: errorSchemas.validation,
       },
     },
   },
 };
 
 // ============================================
-// HELPER FUNCTIONS
+// REQUIRED: buildUrl helper
 // ============================================
 export function buildUrl(path: string, params?: Record<string, string | number>): string {
   let url = path;
@@ -56,3 +79,8 @@ export function buildUrl(path: string, params?: Record<string, string | number>)
   }
   return url;
 }
+
+// Type Helpers
+export type ScoreInput = z.infer<typeof api.scores.create.input>;
+export type ScoreResponse = z.infer<typeof api.scores.create.responses[201]>;
+export type GlaciersListResponse = z.infer<typeof api.glaciers.list.responses[200]>;
