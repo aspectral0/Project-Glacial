@@ -1,38 +1,58 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import {
+  glaciers,
+  scores,
+  type Glacier,
+  type InsertGlacier,
+  type Score,
+  type InsertScore,
+} from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Glaciers
+  getGlaciers(): Promise<Glacier[]>;
+  getGlacier(id: number): Promise<Glacier | undefined>;
+  createGlacier(glacier: InsertGlacier): Promise<Glacier>;
+
+  // Scores
+  getScores(): Promise<Score[]>;
+  createScore(score: InsertScore): Promise<Score>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  // Glaciers
+  async getGlaciers(): Promise<Glacier[]> {
+    return await db.select().from(glaciers);
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getGlacier(id: number): Promise<Glacier | undefined> {
+    const [glacier] = await db
+      .select()
+      .from(glaciers)
+      .where(eq(glaciers.id, id));
+    return glacier;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createGlacier(glacier: InsertGlacier): Promise<Glacier> {
+    const [newGlacier] = await db.insert(glaciers).values(glacier).returning();
+    return newGlacier;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  // Scores
+  async getScores(): Promise<Score[]> {
+    // Return top 10 scores
+    return await db
+      .select()
+      .from(scores)
+      .orderBy(desc(scores.score))
+      .limit(10);
+  }
+
+  async createScore(score: InsertScore): Promise<Score> {
+    const [newScore] = await db.insert(scores).values(score).returning();
+    return newScore;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

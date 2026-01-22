@@ -4,13 +4,16 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+import SelectGlacier from "@/pages/SelectGlacier";
+import Simulation from "@/pages/Simulation";
+import Results from "@/pages/Results";
 
 function Router() {
   return (
     <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
+      <Route path="/" component={SelectGlacier} />
+      <Route path="/simulate/:id" component={Simulation} />
+      <Route path="/results" component={Results} />
       <Route component={NotFound} />
     </Switch>
   );
