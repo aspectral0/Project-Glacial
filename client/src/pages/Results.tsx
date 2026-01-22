@@ -7,14 +7,25 @@ import { useSubmitScore } from "@/hooks/use-glaciers";
 import { useEffect, useState } from "react";
 
 export default function Results() {
-  const [location, setLocation] = useLocation();
+  const [_, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
   const outcome = params.get('outcome');
   const year = Number(params.get('year'));
   const glacierName = params.get('glacier') || 'Unknown Glacier';
+  const finalVolume = Number(params.get('volume') || 0);
+  const finalStability = Number(params.get('stability') || 0);
+  const finalThickness = Number(params.get('thickness') || 0);
   
   const yearsSurvived = year - 2024;
-  const score = yearsSurvived * 100;
+  
+  // New weighted scoring logic
+  // (years * 10) + (finalVolume / 100) + (finalStability * 5) + (finalThickness / 10)
+  const score = Math.max(0, Math.floor(
+    (yearsSurvived * 10) + 
+    (finalVolume / 100) + 
+    (finalStability * 5) + 
+    (finalThickness / 10)
+  ));
 
   const submitScore = useSubmitScore();
   const [submitted, setSubmitted] = useState(false);
@@ -24,20 +35,19 @@ export default function Results() {
       submitScore.mutate({
         glacierName,
         yearsSurvived,
-        finalIceVolume: 0, // Simplified for now
+        finalIceVolume: Math.floor(finalVolume),
+        finalStability: Math.floor(finalStability),
+        finalThickness: Math.floor(finalThickness),
         score,
-        playedAt: new Date().toISOString(),
       });
       setSubmitted(true);
     }
-  }, [submitted, outcome, glacierName, yearsSurvived, score, submitScore]);
+  }, [submitted, outcome, glacierName, yearsSurvived, score, submitScore, finalVolume, finalStability, finalThickness]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[url('https://pixabay.com/get/g3b381a017165a2c4af450876c4aaa553b8694950117c4434fc4e9c3a7e7bff6ace1a1e068d772f60e297de5891dbfc85876b545d33242eb2f4eac8d1d9a590cc_1280.jpg')] opacity-10 bg-cover bg-center" />
+      <div className="absolute inset-0 bg-slate-950/50 z-0" />
       
-      {/* Photo by USGS on Unsplash - Glacier Texture */}
-
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -60,14 +70,22 @@ export default function Results() {
             You managed to sustain the <span className="text-primary font-bold">{glacierName}</span> until year <span className="text-white font-mono font-bold">{year}</span>.
           </p>
 
-          <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="grid grid-cols-2 gap-4 mb-8 text-left">
             <div className="p-4 rounded-xl bg-slate-800/50 border border-white/5">
-              <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Duration</div>
-              <div className="text-3xl font-mono font-bold text-white">{yearsSurvived} <span className="text-sm">years</span></div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Duration</div>
+              <div className="text-xl font-mono font-bold text-white">{yearsSurvived} <span className="text-xs">yrs</span></div>
             </div>
             <div className="p-4 rounded-xl bg-slate-800/50 border border-white/5">
-              <div className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Final Score</div>
-              <div className="text-3xl font-mono font-bold text-primary">{score}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Total Score</div>
+              <div className="text-xl font-mono font-bold text-primary">{score}</div>
+            </div>
+            <div className="p-4 rounded-xl bg-slate-800/50 border border-white/5">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Final Mass</div>
+              <div className="text-xl font-mono font-bold text-blue-400">{(finalVolume/1000).toFixed(1)} <span className="text-xs">km³</span></div>
+            </div>
+            <div className="p-4 rounded-xl bg-slate-800/50 border border-white/5">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Final Health</div>
+              <div className="text-xl font-mono font-bold text-green-400">{finalStability.toFixed(0)}%</div>
             </div>
           </div>
 
@@ -76,7 +94,13 @@ export default function Results() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Menu
             </Button>
-            <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => window.location.reload()}>
+            <Button 
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" 
+              onClick={() => {
+                // Clear any local state if needed and redirect
+                setLocation('/');
+              }}
+            >
               <RotateCcw className="w-4 h-4 mr-2" />
               Play Again
             </Button>
