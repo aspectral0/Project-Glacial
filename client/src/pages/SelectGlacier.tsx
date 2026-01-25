@@ -98,7 +98,7 @@ export default function SelectGlacier() {
                 <div className="space-y-3 mt-auto">
                   <DrillMinigame 
                     glacier={glacier} 
-                    onComplete={(revealed) => setRevealedStates(prev => ({ ...prev, [glacier.id]: revealed }))}
+                    onComplete={(revealed) => setRevealedStates(prev => ({ ...prev, [glacier.id]: revealed.strength }))}
                   />
                   
                   <Link href={`/simulate/${glacier.id}`}>

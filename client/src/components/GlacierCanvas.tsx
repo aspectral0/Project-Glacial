@@ -24,112 +24,125 @@ export function GlacierCanvas({ stats, isFrozen = false }: GlacierCanvasProps) {
     ctx.clearRect(0, 0, width, height);
 
     // Dynamic Scale
-    // Base height mapping: 1000m thickness = 60% of canvas height
-    // Base width mapping: 1000sqkm = 80% of canvas width
     const maxThickness = 2000; 
     const maxArea = 2000;
-
-    const glacierHeight = (stats.thickness / maxThickness) * (height * 0.8);
-    const glacierWidth = (stats.area / maxArea) * (width * 0.9);
-    
-    // Center it
+    const glacierHeight = (stats.thickness / maxThickness) * (height * 0.7);
+    const glacierWidth = (stats.area / maxArea) * (width * 0.85);
     const startX = (width - glacierWidth) / 2;
-    const groundLevel = height - 20;
+    const groundLevel = height - 40;
 
-    // Sky / Background
-    const skyGradient = ctx.createLinearGradient(0, 0, 0, height);
-    skyGradient.addColorStop(0, '#0F172A'); // Dark slate
-    skyGradient.addColorStop(1, '#1E293B'); // Lighter slate
-    ctx.fillStyle = skyGradient;
+    // Atmospheric Background
+    const bgGrad = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width);
+    bgGrad.addColorStop(0, '#0f172a');
+    bgGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Stars (Static for now, could twinkle)
-    if (!isFrozen) {
-      ctx.fillStyle = '#FFFFFF';
-      for (let i = 0; i < 50; i++) {
-        const x = Math.random() * width;
-        const y = Math.random() * (height * 0.6);
-        const s = Math.random() * 2;
-        ctx.fillRect(x, y, s, s);
-      }
+    // Stars with Bloom
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = 'white';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    for (let i = 0; i < 60; i++) {
+      const x = (Math.sin(i * 123.45) * 0.5 + 0.5) * width;
+      const y = (Math.cos(i * 678.90) * 0.5 + 0.5) * (height * 0.7);
+      const size = Math.random() * 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
     }
+    ctx.shadowBlur = 0;
 
-    // Water (Rising if melted?)
-    const waterHeight = 40;
-    ctx.fillStyle = '#0EA5E933'; // Transparent blue
-    ctx.fillRect(0, groundLevel - waterHeight, width, waterHeight + 20);
-
-    // Glacier Drawing
-    ctx.beginPath();
-    ctx.moveTo(startX, groundLevel);
-    
-    // Detailed Top Surface with Noise/Peaks
-    const segments = 20;
-    const segmentWidth = glacierWidth / segments;
+    // Glacier Path Generation
+    const segments = 40;
+    const step = glacierWidth / segments;
+    const points: {x: number, y: number}[] = [];
     
     for (let i = 0; i <= segments; i++) {
-      const x = startX + i * segmentWidth;
-      // Calculate a profile that is thickest in the middle
-      const profile = Math.sin((i / segments) * Math.PI);
-      // Add some deterministic noise based on stats for "uniqueness"
-      const noise = Math.sin(i * 0.8 + stats.thickness * 0.01) * 10;
-      const y = groundLevel - (glacierHeight * profile) + noise;
-      
-      if (i === 0) ctx.lineTo(x, groundLevel);
-      else ctx.lineTo(x, y);
+      const x = startX + i * step;
+      const t = i / segments;
+      const baseProfile = Math.sin(t * Math.PI) * (0.8 + Math.sin(t * 10) * 0.05);
+      const noise = Math.sin(i * 0.5 + stats.thickness * 0.01) * 8 + Math.cos(i * 0.2) * 5;
+      const y = groundLevel - (glacierHeight * baseProfile) + noise;
+      points.push({x, y});
     }
-    
-    ctx.lineTo(startX + glacierWidth, groundLevel);
-    ctx.closePath();
 
-    // Ice Gradient with Subsurface Scattering look
-    const iceGradient = ctx.createLinearGradient(startX, groundLevel - glacierHeight, startX + glacierWidth, groundLevel);
-    const stabilityRatio = stats.stability / 100;
-    
-    if (stabilityRatio > 0.7) {
-      iceGradient.addColorStop(0, '#f0fdff'); // Bright snow top
-      iceGradient.addColorStop(0.2, '#bae6fd'); // Deep blue core
-      iceGradient.addColorStop(1, '#0284c7'); // Dark base
-    } else if (stabilityRatio > 0.3) {
-      iceGradient.addColorStop(0, '#e2e8f0'); 
-      iceGradient.addColorStop(0.5, '#94a3b8');
-      iceGradient.addColorStop(1, '#475569');
-    } else {
-      iceGradient.addColorStop(0, '#475569'); 
-      iceGradient.addColorStop(1, '#1e293b');
-    }
-    
-    ctx.fillStyle = iceGradient;
+    // 1. Back Layer (Darker Depth)
+    ctx.beginPath();
+    ctx.moveTo(startX, groundLevel);
+    points.forEach(p => ctx.lineTo(p.x + 10, p.y - 10));
+    ctx.lineTo(startX + glacierWidth + 10, groundLevel);
+    ctx.fillStyle = '#0c4a6e';
     ctx.fill();
 
-    // Add Highlight/Sheen
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.globalCompositeOperation = 'source-over';
+    // 2. Main Body Layer
+    ctx.beginPath();
+    ctx.moveTo(startX, groundLevel);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(startX + glacierWidth, groundLevel);
+    
+    const bodyGrad = ctx.createLinearGradient(0, groundLevel - glacierHeight, 0, groundLevel);
+    bodyGrad.addColorStop(0, '#f8fafc'); // Fresh snow
+    bodyGrad.addColorStop(0.1, '#e0f2fe'); // Light ice
+    bodyGrad.addColorStop(0.4, '#7dd3fc'); // Compressed ice
+    bodyGrad.addColorStop(0.8, '#0369a1'); // Deep glacial blue
+    bodyGrad.addColorStop(1, '#0c4a6e'); // Base
+    
+    ctx.fillStyle = bodyGrad;
+    ctx.fill();
 
-    // Cracks overlay if unstable
-    if (stats.stability < 60) {
-      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-      ctx.lineWidth = 1.5;
-      const crackCount = Math.floor((1 - stabilityRatio) * 15);
-      for (let i = 0; i < crackCount; i++) {
-        const cx = startX + (Math.random() * 0.6 + 0.2) * glacierWidth;
-        const cy = groundLevel - (Math.random() * 0.5) * glacierHeight;
+    // 3. Texture & Highlights
+    ctx.save();
+    ctx.clip(); // Only draw inside the glacier
+    
+    // Subsurface scattering highlights
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = '#bae6fd';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < points.length - 1; i++) {
+      if (i % 3 === 0) {
         ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(cx + (Math.random() - 0.5) * 30, cy + 40);
+        ctx.moveTo(points[i].x, points[i].y);
+        ctx.lineTo(points[i].x + 20, points[i].y + 40);
         ctx.stroke();
       }
     }
 
-    // Reflection in water
+    // Crevasses/Cracks
+    if (stats.stability < 70) {
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = '#082f49';
+      ctx.lineWidth = 1;
+      const crackDensity = Math.floor((100 - stats.stability) / 5);
+      for (let i = 0; i < crackDensity; i++) {
+        const cx = startX + Math.random() * glacierWidth;
+        const cy = groundLevel - Math.random() * glacierHeight * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + (Math.random()-0.5)*15, cy + 30 + Math.random()*20);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    // 4. Edge Definition
+    ctx.beginPath();
+    ctx.moveTo(startX, groundLevel);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(startX + glacierWidth, groundLevel);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Reflection
     ctx.save();
-    ctx.scale(1, -1);
-    ctx.translate(0, -groundLevel * 2);
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = iceGradient;
+    ctx.globalAlpha = 0.15;
+    ctx.scale(1, -0.4);
+    ctx.translate(0, -groundLevel * 2.5);
+    ctx.beginPath();
+    ctx.moveTo(startX, groundLevel);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(startX + glacierWidth, groundLevel);
+    ctx.fillStyle = '#7dd3fc';
     ctx.fill();
     ctx.restore();
 

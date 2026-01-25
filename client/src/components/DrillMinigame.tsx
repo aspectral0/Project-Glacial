@@ -65,119 +65,159 @@ export function DrillMinigame({ glacier, onComplete }: DrillMinigameProps) {
   }, [isDrilling, isJammed, isFinished, revealed, onComplete]);
 
   return (
-    <Dialog>
+    <Dialog onOpenChange={(open) => {
+      if (!open && !isFinished) {
+        setDepth(0);
+        setHeat(0);
+        setEnergy(100);
+        setIsDrilling(false);
+      }
+    }}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="w-full border-blue-500/30 hover:bg-blue-500/10">
-          Launch Drill Mission
+        <Button variant="outline" className={`w-full border-blue-500/30 hover:bg-blue-500/10 ${isFinished ? 'border-green-500/50 bg-green-500/5' : ''}`}>
+          {isFinished ? 'MISSION DATA SYNCED' : 'Launch Drill Mission'}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] bg-slate-950 border-blue-500/20 text-white">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-mono tracking-tighter uppercase text-blue-400">
-            Ice Core Analysis // {glacier.name}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[700px] bg-slate-950 border-blue-500/20 text-white p-0 overflow-hidden shadow-[0_0_50px_rgba(30,58,138,0.3)]">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
+        
+        <div className="relative z-10 p-6">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-3xl font-mono tracking-tighter uppercase text-blue-400 flex items-center gap-3">
+              <span className="w-2 h-8 bg-blue-500" />
+              Core Analysis // {glacier.name}
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-          {/* Left: Drill Visualizer */}
-          <div className="relative h-[400px] bg-slate-900 rounded-lg overflow-hidden border border-white/5 flex flex-col items-center">
-            <div className="absolute top-0 w-full h-full opacity-10 pointer-events-none">
-              {[...Array(20)].map((_, i) => (
-                <div key={i} className="h-px w-full bg-white mb-8" style={{ marginTop: `${i * 20}px` }} />
-              ))}
-            </div>
-            
-            <div 
-              className="absolute top-0 w-4 bg-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all duration-100"
-              style={{ height: `${(depth / 1000) * 100}%` }}
-            />
-            
-            <div 
-              className={`relative z-10 mt-4 p-2 rounded-full border-2 transition-colors ${
-                isJammed ? 'bg-red-500 border-red-400' : isDrilling ? 'bg-blue-600 border-blue-400' : 'bg-slate-700 border-slate-500'
-              }`}
-              style={{ transform: `translateY(${(depth / 1000) * 350}px)` }}
-            >
-              <Zap className={`w-8 h-8 ${isDrilling ? 'animate-pulse' : ''}`} />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left: Drill Visualizer */}
+            <div className="relative h-[450px] bg-black rounded border border-white/10 flex flex-col items-center shadow-inner group">
+              <div className="absolute inset-0 bg-gradient-to-b from-blue-900/5 to-transparent" />
+              
+              <div className="absolute left-0 top-0 bottom-0 w-8 border-r border-white/5 flex flex-col justify-between py-4 text-[8px] font-mono text-slate-600 px-1">
+                {[0, 200, 400, 600, 800, 1000].map(m => <span key={m}>{m}m</span>)}
+              </div>
 
-            <div className="absolute bottom-4 left-4 right-4 space-y-2 font-mono text-xs">
-              <div className="flex justify-between">
-                <span>DEPTH</span>
-                <span className="text-blue-400">{depth.toFixed(0)}m / 1000m</span>
+              <div className="absolute inset-0 opacity-10 pointer-events-none">
+                {[...Array(20)].map((_, i) => (
+                  <div key={i} className="h-px w-full bg-white/20" style={{ marginTop: `${i * 22.5}px` }} />
+                ))}
               </div>
-              <Progress value={(depth / 1000) * 100} className="h-1 bg-slate-800" />
-            </div>
-          </div>
-
-          {/* Right: Controls & Stats */}
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-red-400">
-                  <Thermometer className="w-4 h-4" />
-                  <span className="text-xs font-mono uppercase">Drill Heat</span>
-                </div>
-                <span className={`text-xs font-mono ${heat > 80 ? 'text-red-500' : 'text-slate-400'}`}>
-                  {heat.toFixed(0)}%
-                </span>
-              </div>
-              <Progress value={heat} className={`h-2 bg-slate-800 ${heat > 80 ? 'bg-red-950' : ''}`} />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-yellow-400">
-                  <Zap className="w-4 h-4" />
-                  <span className="text-xs font-mono uppercase">Energy</span>
-                </div>
-                <span className="text-xs font-mono text-slate-400">{energy.toFixed(0)}%</span>
-              </div>
-              <Progress value={energy} className="h-2 bg-slate-800" />
-            </div>
-
-            <div className="p-4 rounded-lg bg-slate-900 border border-white/5 space-y-3">
-              <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Data Unlock Log</div>
-              <div className="flex items-center gap-2 text-xs">
-                {revealed.temp ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <div className="w-3 h-3 rounded-full border border-slate-700" />}
-                <span className={revealed.temp ? 'text-slate-300' : 'text-slate-600'}>250m: Paleoclimate Data</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                {revealed.co2 ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <div className="w-3 h-3 rounded-full border border-slate-700" />}
-                <span className={revealed.co2 ? 'text-slate-300' : 'text-slate-600'}>500m: Atmospheric Markers</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                {revealed.strength ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <div className="w-3 h-3 rounded-full border border-slate-700" />}
-                <span className={revealed.strength ? 'text-slate-300' : 'text-slate-600'}>750m: Structural Integrity</span>
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <Button
-                className={`w-full py-8 text-xl font-bold font-mono tracking-tighter transition-all ${
-                  isJammed ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-500 active:scale-95'
-                }`}
-                onMouseDown={() => !isJammed && !isFinished && setIsDrilling(true)}
-                onMouseUp={() => setIsDrilling(false)}
-                onMouseLeave={() => setIsDrilling(false)}
-                disabled={isFinished || energy <= 0}
+              
+              {/* Drill Body */}
+              <div 
+                className="absolute top-0 w-1 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.8)] transition-all duration-75"
+                style={{ height: `${(depth / 1000) * 100}%` }}
+              />
+              
+              <div 
+                className={`relative z-20 mt-2 transition-all duration-75 ease-out`}
+                style={{ transform: `translateY(${(depth / 1000) * 400}px)` }}
               >
-                {isJammed ? 'JAMMED' : isFinished ? 'ANALYSIS COMPLETE' : 'ENGAGE DRILL'}
-              </Button>
-              <p className="text-[10px] text-center mt-2 text-slate-500 font-mono">
-                HOLD BUTTON TO DRILL // RELEASE TO COOL
-              </p>
+                <div className={`p-3 rounded bg-slate-900 border-2 shadow-lg transition-colors ${
+                  isJammed ? 'border-red-500 shadow-red-900/40' : isDrilling ? 'border-blue-400 animate-pulse shadow-blue-500/40' : 'border-slate-700'
+                }`}>
+                  <Zap className={`w-10 h-10 ${isDrilling ? 'text-blue-400' : 'text-slate-500'}`} />
+                </div>
+                {isDrilling && (
+                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                    <div className="w-1 h-8 bg-gradient-to-t from-transparent via-blue-500/40 to-transparent animate-bounce" />
+                  </div>
+                )}
+              </div>
+
+              <div className="absolute bottom-6 left-12 right-6 space-y-3 font-mono">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-slate-500 uppercase">Current Depth</span>
+                  <span className="text-blue-400 font-bold">{depth.toFixed(0)} M</span>
+                </div>
+                <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                  <div 
+                    className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all"
+                    style={{ width: `${(depth / 1000) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Technical Readout */}
+            <div className="flex flex-col h-full font-mono">
+              <div className="flex-1 space-y-8">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="text-[10px] text-slate-500 uppercase flex items-center gap-2">
+                      <Thermometer className="w-3 h-3" /> Drill Heat
+                    </div>
+                    <div className="text-2xl font-bold tabular-nums">
+                      {heat.toFixed(0)}<span className="text-sm font-normal text-slate-600">%</span>
+                    </div>
+                    <Progress value={heat} className={`h-1 bg-slate-900 ${heat > 80 ? 'text-red-500' : 'text-blue-500'}`} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-[10px] text-slate-500 uppercase flex items-center gap-2">
+                      <Zap className="w-3 h-3" /> Energy
+                    </div>
+                    <div className="text-2xl font-bold tabular-nums">
+                      {energy.toFixed(0)}<span className="text-sm font-normal text-slate-600">%</span>
+                    </div>
+                    <Progress value={energy} className="h-1 bg-slate-900" />
+                  </div>
+                </div>
+
+                <div className="bg-black/40 p-5 rounded border border-white/5 space-y-4">
+                  <div className="text-[10px] text-blue-500 uppercase tracking-widest flex items-center justify-between">
+                    <span>Telemetry Log</span>
+                    <span className="animate-pulse">● LIVE</span>
+                  </div>
+                  <div className="space-y-3">
+                    <UnlockItem label="250m: Thermal Gradient" isUnlocked={revealed.temp} />
+                    <UnlockItem label="500m: Gas Sequestration" isUnlocked={revealed.co2} />
+                    <UnlockItem label="750m: Crystalline Density" isUnlocked={revealed.strength} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-auto pt-6 border-t border-white/5">
+                <Button
+                  className={`w-full py-10 text-2xl font-black tracking-tighter transition-all rounded shadow-2xl relative overflow-hidden group ${
+                    isJammed ? 'bg-red-950 text-red-500 border border-red-500/50' : isFinished ? 'bg-green-600 text-white' : 'bg-blue-600 hover:bg-blue-500'
+                  }`}
+                  onMouseDown={() => !isJammed && !isFinished && setIsDrilling(true)}
+                  onMouseUp={() => setIsDrilling(false)}
+                  onMouseLeave={() => setIsDrilling(false)}
+                  disabled={isFinished || energy <= 0}
+                >
+                  <div className="relative z-10 flex flex-col items-center">
+                    <span>{isJammed ? 'SYSTEM OVERHEAT' : isFinished ? 'SYNC SUCCESSFUL' : 'ENGAGE DRILL'}</span>
+                    {!isJammed && !isFinished && <span className="text-[8px] font-normal tracking-widest mt-1 opacity-60">HOLD TO INJECT ENERGY</span>}
+                  </div>
+                  {isDrilling && <div className="absolute inset-0 bg-white/10 animate-pulse" />}
+                </Button>
+                {isJammed && (
+                  <div className="flex items-center gap-2 text-red-500 text-[10px] mt-2 justify-center animate-bounce font-bold">
+                    <AlertTriangle className="w-3 h-3" /> COOLING SYSTEM ENGAGED - PLEASE WAIT
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-
-        {isFinished && (
-          <div className="mt-4 p-4 rounded bg-green-500/10 border border-green-500/20 flex items-center gap-3">
-            <CheckCircle2 className="text-green-400 w-5 h-5" />
-            <p className="text-sm text-green-200">
-              Core extraction successful. Stability data calibrated. Ready for simulation.
-            </p>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function UnlockItem({ label, isUnlocked }: { label: string, isUnlocked: boolean }) {
+  return (
+    <div className={`flex items-center justify-between p-2 rounded transition-all ${isUnlocked ? 'bg-blue-500/10' : 'opacity-40'}`}>
+      <span className="text-[10px]">{label}</span>
+      {isUnlocked ? (
+        <span className="text-[8px] text-blue-400 font-bold px-1 border border-blue-400/30 rounded">DECRYPTED</span>
+      ) : (
+        <span className="text-[8px] text-slate-600 font-bold">LOCKED</span>
+      )}
+    </div>
+  );
+}
   );
 }
