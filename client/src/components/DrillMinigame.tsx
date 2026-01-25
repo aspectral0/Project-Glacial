@@ -219,5 +219,3 @@ function UnlockItem({ label, isUnlocked }: { label: string, isUnlocked: boolean 
     </div>
   );
 }
-  );
-}

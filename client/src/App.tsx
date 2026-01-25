@@ -10,12 +10,14 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={SelectGlacier} />
-      <Route path="/simulate/:id" component={Simulation} />
-      <Route path="/results" component={Results} />
-      <Route component={NotFound} />
-    </Switch>
+    <div className="flex-1 w-full flex flex-col">
+      <Switch>
+        <Route path="/" component={SelectGlacier} />
+        <Route path="/simulate/:id" component={Simulation} />
+        <Route path="/results" component={Results} />
+        <Route component={NotFound} />
+      </Switch>
+    </div>
   );
 }
 
@@ -23,7 +25,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <div className="w-full min-h-screen bg-[#020617] text-slate-200">
+        <div className="w-full min-h-screen bg-[#020617] text-slate-200 flex flex-col overflow-x-hidden">
           <Router />
           <Toaster />
         </div>

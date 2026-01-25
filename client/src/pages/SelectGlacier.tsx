@@ -33,7 +33,9 @@ export default function SelectGlacier() {
     );
   }
 
-  if (!glaciers || glaciers.length === 0) {
+  const glacierList = glaciers || [];
+
+  if (glacierList.length === 0) {
     return (
       <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-white p-4">
         <h1 className="text-2xl font-mono text-blue-500 mb-4">NO GLACIERS FOUND</h1>
@@ -44,7 +46,7 @@ export default function SelectGlacier() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#020617] flex flex-col items-center py-12 relative overflow-y-auto z-10">
+    <div className="min-h-screen w-full bg-[#020617] flex flex-col items-center py-12 relative overflow-y-auto overflow-x-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-[#020617] to-[#020617] z-0 pointer-events-none" />
       
       <div className="relative z-20 container mx-auto px-4 max-w-7xl w-full">
@@ -54,12 +56,12 @@ export default function SelectGlacier() {
               Project Glacial // Sat-Sync v1.0
             </span>
           </motion.div>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter text-white uppercase mb-4 drop-shadow-lg">Select Target</h1>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tighter text-white uppercase mb-4">Select Target</h1>
           <p className="text-slate-400 font-mono text-xs">DECRYPTING REAL-TIME SATELLITE TELEMETRY...</p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full pb-12">
-          {glaciers.map((glacier, index) => (
+          {glacierList.map((glacier, index) => (
             <motion.div
               key={glacier.id}
               initial={{ opacity: 0, y: 20 }}
@@ -98,7 +100,7 @@ export default function SelectGlacier() {
                 <div className="space-y-3 mt-auto">
                   <DrillMinigame 
                     glacier={glacier} 
-                    onComplete={(revealed) => setRevealedStates(prev => ({ ...prev, [glacier.id]: revealed.strength }))}
+                    onComplete={(revealed) => setRevealedStates(prev => ({ ...prev, [glacier.id]: true }))}
                   />
                   
                   <Link href={`/simulate/${glacier.id}`}>
