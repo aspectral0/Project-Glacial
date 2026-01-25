@@ -14,6 +14,7 @@ interface DrillMinigameProps {
 export function DrillMinigame({ glacier, onComplete }: DrillMinigameProps) {
   const [depth, setDepth] = useState(0);
   const [heat, setHeat] = useState(0);
+  const [pressure, setPressure] = useState(0);
   const [energy, setEnergy] = useState(100);
   const [isDrilling, setIsDrilling] = useState(false);
   const [isJammed, setIsJammed] = useState(false);
@@ -30,7 +31,7 @@ export function DrillMinigame({ glacier, onComplete }: DrillMinigameProps) {
     if (isDrilling && !isJammed && !isFinished) {
       interval = setInterval(() => {
         setDepth(d => {
-          const newDepth = Math.min(1000, d + 3); // Slightly slower for better control
+          const newDepth = Math.min(1000, d + 8); // Significantly faster (from 3)
           if (newDepth >= 250 && !revealed.temp) setRevealed(r => ({ ...r, temp: true }));
           if (newDepth >= 500 && !revealed.co2) setRevealed(r => ({ ...r, co2: true }));
           if (newDepth >= 750 && !revealed.strength) setRevealed(r => ({ ...r, strength: true }));
@@ -42,27 +43,27 @@ export function DrillMinigame({ glacier, onComplete }: DrillMinigameProps) {
           return newDepth;
         });
         setHeat(h => {
-          // Heat increases faster with depth
-          const depthMultiplier = 1 + (depth / 1000);
-          const newHeat = h + (1.8 * depthMultiplier);
+          const depthMultiplier = 1 + (depth / 500); // Heat builds faster
+          const newHeat = h + (2.5 * depthMultiplier);
           if (newHeat >= 100) {
             setIsJammed(true);
             setIsDrilling(false);
-            // Longer jam penalty
-            setTimeout(() => setIsJammed(false), 3000);
+            setTimeout(() => setIsJammed(false), 2000); // Shorter penalty (from 3000)
             return 100;
           }
           return newHeat;
         });
-        setEnergy(e => Math.max(0, e - 0.2));
+        setPressure(p => Math.min(100, (depth / 1000) * 100 + Math.random() * 5));
+        setEnergy(e => Math.max(0, e - 0.5));
       }, 50);
     } else {
       interval = setInterval(() => {
-        setHeat(h => Math.max(0, h - 1));
+        setHeat(h => Math.max(0, h - 2)); // Faster cooling
+        setPressure(p => Math.max(0, p - 5));
       }, 50);
     }
     return () => clearInterval(interval);
-  }, [isDrilling, isJammed, isFinished, revealed, onComplete]);
+  }, [isDrilling, isJammed, isFinished, revealed, onComplete, depth]);
 
   return (
     <Dialog onOpenChange={(open) => {
@@ -155,13 +156,26 @@ export function DrillMinigame({ glacier, onComplete }: DrillMinigameProps) {
                   </div>
                   <div className="space-y-2">
                     <div className="text-[10px] text-slate-500 uppercase flex items-center gap-2">
-                      <Zap className="w-3 h-3" /> Energy
+                      <ChevronDown className="w-3 h-3" /> Hydrostatic Pressure
                     </div>
+                    <div className="text-2xl font-bold tabular-nums">
+                      {pressure.toFixed(0)}<span className="text-sm font-normal text-slate-600">MPa</span>
+                    </div>
+                    <Progress value={pressure} className="h-1 bg-slate-900 text-cyan-500" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-[10px] text-slate-500 uppercase flex items-center gap-2">
+                    <Zap className="w-3 h-3" /> Energy Reserve
+                  </div>
+                  <div className="flex items-end justify-between">
                     <div className="text-2xl font-bold tabular-nums">
                       {energy.toFixed(0)}<span className="text-sm font-normal text-slate-600">%</span>
                     </div>
-                    <Progress value={energy} className="h-1 bg-slate-900" />
+                    <span className="text-[8px] text-blue-500/50 mb-1">AUX POWER: ACTIVE</span>
                   </div>
+                  <Progress value={energy} className="h-1 bg-slate-900" />
                 </div>
 
                 <div className="bg-black/40 p-5 rounded border border-white/5 space-y-4">
