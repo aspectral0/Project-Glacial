@@ -30,23 +30,26 @@ export function DrillMinigame({ glacier, onComplete }: DrillMinigameProps) {
     if (isDrilling && !isJammed && !isFinished) {
       interval = setInterval(() => {
         setDepth(d => {
-          const newDepth = Math.min(1000, d + 5);
+          const newDepth = Math.min(1000, d + 3); // Slightly slower for better control
           if (newDepth >= 250 && !revealed.temp) setRevealed(r => ({ ...r, temp: true }));
           if (newDepth >= 500 && !revealed.co2) setRevealed(r => ({ ...r, co2: true }));
           if (newDepth >= 750 && !revealed.strength) setRevealed(r => ({ ...r, strength: true }));
           if (newDepth >= 1000) {
             setIsFinished(true);
             setIsDrilling(false);
-            onComplete?.(revealed);
+            onComplete?.({ temp: true, co2: true, strength: true });
           }
           return newDepth;
         });
         setHeat(h => {
-          const newHeat = h + 2.5;
+          // Heat increases faster with depth
+          const depthMultiplier = 1 + (depth / 1000);
+          const newHeat = h + (1.8 * depthMultiplier);
           if (newHeat >= 100) {
             setIsJammed(true);
             setIsDrilling(false);
-            setTimeout(() => setIsJammed(false), 2000);
+            // Longer jam penalty
+            setTimeout(() => setIsJammed(false), 3000);
             return 100;
           }
           return newHeat;

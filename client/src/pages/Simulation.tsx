@@ -135,6 +135,7 @@ export default function Simulation() {
                 <h3 className="text-[10px] font-mono uppercase tracking-widest text-blue-500/60 mb-2 border-b border-white/5 pb-2">
                   Telemetry Output
                 </h3>
+                <StatBox label="RESEARCH TARGET" value={glacier?.name || "UNKNOWN"} unit="" />
                 <StatBox label="THICKNESS" value={state.glacierStats.thickness.toFixed(0)} unit="m" />
                 <StatBox label="SURFACE AREA" value={state.glacierStats.area.toFixed(0)} unit="km²" />
                 <StatBox label="STABILITY" value={state.glacierStats.stability.toFixed(0)} unit="%" />

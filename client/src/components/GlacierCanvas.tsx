@@ -63,54 +63,65 @@ export function GlacierCanvas({ stats, isFrozen = false }: GlacierCanvasProps) {
     ctx.beginPath();
     ctx.moveTo(startX, groundLevel);
     
-    // Left Slope
-    ctx.bezierCurveTo(
-      startX + glacierWidth * 0.2, groundLevel - glacierHeight, 
-      startX + glacierWidth * 0.4, groundLevel - glacierHeight * 1.1, 
-      startX + glacierWidth * 0.5, groundLevel - glacierHeight * 1.05
-    );
+    // Detailed Top Surface with Noise/Peaks
+    const segments = 20;
+    const segmentWidth = glacierWidth / segments;
     
-    // Right Slope
-    ctx.bezierCurveTo(
-      startX + glacierWidth * 0.6, groundLevel - glacierHeight, 
-      startX + glacierWidth * 0.8, groundLevel - glacierHeight * 0.2, 
-      startX + glacierWidth, groundLevel
-    );
+    for (let i = 0; i <= segments; i++) {
+      const x = startX + i * segmentWidth;
+      // Calculate a profile that is thickest in the middle
+      const profile = Math.sin((i / segments) * Math.PI);
+      // Add some deterministic noise based on stats for "uniqueness"
+      const noise = Math.sin(i * 0.8 + stats.thickness * 0.01) * 10;
+      const y = groundLevel - (glacierHeight * profile) + noise;
+      
+      if (i === 0) ctx.lineTo(x, groundLevel);
+      else ctx.lineTo(x, y);
+    }
     
+    ctx.lineTo(startX + glacierWidth, groundLevel);
     ctx.closePath();
 
-    // Ice Gradient
-    const iceGradient = ctx.createLinearGradient(0, groundLevel - glacierHeight, 0, groundLevel);
-    // Color shifts based on stability (more grey/cracked look if unstable)
+    // Ice Gradient with Subsurface Scattering look
+    const iceGradient = ctx.createLinearGradient(startX, groundLevel - glacierHeight, startX + glacierWidth, groundLevel);
     const stabilityRatio = stats.stability / 100;
     
     if (stabilityRatio > 0.7) {
-      iceGradient.addColorStop(0, '#E0F7FA');
-      iceGradient.addColorStop(1, '#0288D1');
+      iceGradient.addColorStop(0, '#f0fdff'); // Bright snow top
+      iceGradient.addColorStop(0.2, '#bae6fd'); // Deep blue core
+      iceGradient.addColorStop(1, '#0284c7'); // Dark base
     } else if (stabilityRatio > 0.3) {
-      iceGradient.addColorStop(0, '#CFD8DC'); // Greying out
-      iceGradient.addColorStop(1, '#455A64');
+      iceGradient.addColorStop(0, '#e2e8f0'); 
+      iceGradient.addColorStop(0.5, '#94a3b8');
+      iceGradient.addColorStop(1, '#475569');
     } else {
-      iceGradient.addColorStop(0, '#37474F'); // Dark/Dirty
-      iceGradient.addColorStop(1, '#263238');
+      iceGradient.addColorStop(0, '#475569'); 
+      iceGradient.addColorStop(1, '#1e293b');
     }
     
     ctx.fillStyle = iceGradient;
     ctx.fill();
 
+    // Add Highlight/Sheen
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+
     // Cracks overlay if unstable
-    if (stats.stability < 50) {
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(startX + glacierWidth * 0.4, groundLevel - glacierHeight * 0.8);
-      ctx.lineTo(startX + glacierWidth * 0.45, groundLevel - glacierHeight * 0.5);
-      ctx.stroke();
-      
-      ctx.beginPath();
-      ctx.moveTo(startX + glacierWidth * 0.7, groundLevel - glacierHeight * 0.6);
-      ctx.lineTo(startX + glacierWidth * 0.65, groundLevel - glacierHeight * 0.3);
-      ctx.stroke();
+    if (stats.stability < 60) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+      ctx.lineWidth = 1.5;
+      const crackCount = Math.floor((1 - stabilityRatio) * 15);
+      for (let i = 0; i < crackCount; i++) {
+        const cx = startX + (Math.random() * 0.6 + 0.2) * glacierWidth;
+        const cy = groundLevel - (Math.random() * 0.5) * glacierHeight;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + (Math.random() - 0.5) * 30, cy + 40);
+        ctx.stroke();
+      }
     }
 
     // Reflection in water
