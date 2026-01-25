@@ -181,12 +181,15 @@ export function DrillMinigame({ glacier, onComplete }: DrillMinigameProps) {
                 <div className="bg-black/40 p-5 rounded border border-white/5 space-y-4">
                   <div className="text-[10px] text-blue-500 uppercase tracking-widest flex items-center justify-between">
                     <span>Telemetry Log</span>
-                    <span className="animate-pulse">● LIVE</span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-1 h-1 bg-red-500 rounded-full animate-ping" />
+                      <span className="animate-pulse">● LIVE DATA</span>
+                    </span>
                   </div>
                   <div className="space-y-3">
-                    <UnlockItem label="250m: Thermal Gradient" isUnlocked={revealed.temp} />
-                    <UnlockItem label="500m: Gas Sequestration" isUnlocked={revealed.co2} />
-                    <UnlockItem label="750m: Crystalline Density" isUnlocked={revealed.strength} />
+                    <UnlockItem label="250m: Thermal Gradient" isUnlocked={revealed.temp} icon={<Thermometer className="w-2 h-2" />} />
+                    <UnlockItem label="500m: Gas Sequestration" isUnlocked={revealed.co2} icon={<Zap className="w-2 h-2" />} />
+                    <UnlockItem label="750m: Crystalline Density" isUnlocked={revealed.strength} icon={<Mountain className="w-2 h-2" />} />
                   </div>
                 </div>
               </div>
@@ -221,12 +224,15 @@ export function DrillMinigame({ glacier, onComplete }: DrillMinigameProps) {
   );
 }
 
-function UnlockItem({ label, isUnlocked }: { label: string, isUnlocked: boolean }) {
+function UnlockItem({ label, isUnlocked, icon }: { label: string, isUnlocked: boolean, icon?: React.ReactNode }) {
   return (
-    <div className={`flex items-center justify-between p-2 rounded transition-all ${isUnlocked ? 'bg-blue-500/10' : 'opacity-40'}`}>
-      <span className="text-[10px]">{label}</span>
+    <div className={`flex items-center justify-between p-2 rounded transition-all border ${isUnlocked ? 'bg-blue-500/10 border-blue-500/20 shadow-[inset_0_0_10px_rgba(59,130,246,0.1)]' : 'opacity-40 border-transparent'}`}>
+      <div className="flex items-center gap-2">
+        {icon && <span className={isUnlocked ? 'text-blue-400' : 'text-slate-600'}>{icon}</span>}
+        <span className="text-[10px] uppercase tracking-tight">{label}</span>
+      </div>
       {isUnlocked ? (
-        <span className="text-[8px] text-blue-400 font-bold px-1 border border-blue-400/30 rounded">DECRYPTED</span>
+        <span className="text-[8px] text-blue-400 font-bold px-1.5 py-0.5 border border-blue-400/30 rounded bg-blue-400/5">DECRYPTED</span>
       ) : (
         <span className="text-[8px] text-slate-600 font-bold">LOCKED</span>
       )}

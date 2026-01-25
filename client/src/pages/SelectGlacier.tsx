@@ -10,7 +10,13 @@ import { useState } from "react";
 
 export default function SelectGlacier() {
   const { data: glaciers, isLoading, error } = useGlaciers();
-  const [revealedStates, setRevealedStates] = useState<Record<number, any>>({});
+  const [revealedStates, setRevealedStates] = useState<Record<number, any>>(() => {
+    // Load initial revealed state from localStorage
+    if (typeof window !== 'undefined') {
+      return JSON.parse(localStorage.getItem('unlocked_glaciers') || '{}');
+    }
+    return {};
+  });
 
   if (isLoading) {
     return (
@@ -100,7 +106,13 @@ export default function SelectGlacier() {
                 <div className="space-y-3 mt-auto">
                   <DrillMinigame 
                     glacier={glacier} 
-                    onComplete={(revealed) => setRevealedStates(prev => ({ ...prev, [glacier.id]: true }))}
+                    onComplete={(revealed) => {
+                      setRevealedStates(prev => ({ ...prev, [glacier.id]: true }));
+                      // Persist unlock state
+                      const unlocked = JSON.parse(localStorage.getItem('unlocked_glaciers') || '{}');
+                      unlocked[glacier.id] = true;
+                      localStorage.setItem('unlocked_glaciers', JSON.stringify(unlocked));
+                    }}
                   />
                   
                   <Link href={`/simulate/${glacier.id}`}>

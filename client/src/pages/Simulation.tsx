@@ -15,7 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 export default function Simulation() {
   const { id } = useParams();
   const [_, setLocation] = useLocation();
-  const { data: glacier, isLoading } = useGlacier(Number(id));
+  const { data: glacier, isLoading, error } = useGlacier(Number(id));
   
   const { 
     state, 
@@ -23,6 +23,14 @@ export default function Simulation() {
     pauseSimulation, 
     setEnvironmentFactor 
   } = useSimulation(glacier);
+
+  useEffect(() => {
+    // Check if the drill session was completed for this glacier
+    const unlockedGlaciers = JSON.parse(localStorage.getItem('unlocked_glaciers') || '{}');
+    if (!isLoading && id && !unlockedGlaciers[id]) {
+      setLocation("/");
+    }
+  }, [id, isLoading, setLocation]);
 
   useEffect(() => {
     if (state?.isGameOver) {
