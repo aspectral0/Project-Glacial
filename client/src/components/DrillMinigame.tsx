@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Glacier } from "@shared/schema";
-import { Thermometer, Zap, ChevronDown, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Thermometer, Zap, ChevronDown, CheckCircle2, AlertTriangle, Mountain } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 interface DrillMinigameProps {
