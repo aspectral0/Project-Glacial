@@ -17,44 +17,90 @@ export async function registerRoutes(
   
   app.get(api.glaciers.list.path, async (req, res) => {
     try {
+      // First try to get from database
+      const existingGlaciers = await storage.getGlaciers();
+      if (existingGlaciers.length > 0) {
+        return res.json(existingGlaciers);
+      }
+
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           { 
             role: "system", 
-            content: "You are a scientific data generator. Return a JSON array of 3 real-world glaciers with their current stats (iceThickness in meters, surfaceArea in sq km, stability 0-100, tempSensitivity 1-10) and randomized historical drill data (historicalTemp array of 5 numbers, co2Levels array of 5 numbers, layerStrength array of 5 numbers). Respond ONLY with valid JSON." 
+            content: "You are a scientific data generator. Return a JSON object with a 'glaciers' key containing an array of 3 real-world glaciers with their current stats (name, iceThickness in meters, surfaceArea in sq km, stability 0-100, tempSensitivity 1-10, and a description) and randomized historical drill data (historicalTemp array of 5 numbers, co2Levels array of 5 numbers, layerStrength array of 5 numbers). Respond ONLY with valid JSON." 
           },
           { role: "user", content: "Generate 3 real-world glaciers." }
         ],
         response_format: { type: "json_object" }
       });
 
-      const data = JSON.parse(response.choices[0].message.content || "{}");
-      const glaciersList = data.glaciers || data.items || Object.values(data)[0] || [];
+      const rawContent = response.choices[0].message.content || "{}";
+      const data = JSON.parse(rawContent);
+      const glaciersList = data.glaciers || data.items || data.data || [];
       
-      // Ensure IDs are added
-      const glaciersWithIds = glaciersList.map((g: any, i: number) => ({
-        ...g,
-        id: i + 1,
-        drillData: g.drillData || {
-          historicalTemp: [-20, -18, -15, -12, -10],
-          co2Levels: [280, 310, 340, 380, 410],
-          layerStrength: [9, 8, 7, 6, 5]
-        }
-      }));
+      const createdGlaciers = [];
+      for (const g of glaciersList) {
+        const glacier = await storage.createGlacier({
+          name: g.name || "Unknown Glacier",
+          description: g.description || `A unique glacier discovered in a remote region.`,
+          iceThickness: Number(g.iceThickness) || 500,
+          surfaceArea: Number(g.surfaceArea) || 100,
+          stability: Number(g.stability) || 80,
+          tempSensitivity: Number(g.tempSensitivity) || 5,
+          drillData: g.drillData || {
+            historicalTemp: [-20, -18, -15, -12, -10],
+            co2Levels: [280, 310, 340, 380, 410],
+            layerStrength: [9, 8, 7, 6, 5]
+          }
+        });
+        createdGlaciers.push(glacier);
+      }
 
-      res.json(glaciersWithIds);
+      if (createdGlaciers.length === 0) {
+        throw new Error("AI returned empty glacier list");
+      }
+
+      res.json(createdGlaciers);
     } catch (err) {
       console.error("AI Glacier List Error:", err);
-      // Fallback to random generation if AI fails
-      const randomGlaciers = Array.from({ length: 3 }).map((_, i) => generateRandomGlacier(i + 1));
+      const existing = await storage.getGlaciers();
+      if (existing.length > 0) return res.json(existing);
+      
+      const randomGlaciers = [];
+      const fallbackData = [
+        { name: "Jakobshavn Isbræ", location: "Greenland" },
+        { name: "Lambert Glacier", location: "Antarctica" },
+        { name: "Perito Moreno", location: "Argentina" }
+      ];
+      
+      for (let i = 0; i < 3; i++) {
+        const fallback = fallbackData[i];
+        const g = await storage.createGlacier({
+          name: fallback.name,
+          description: `A significant glacier located in ${fallback.location}.`,
+          iceThickness: 800 + Math.floor(Math.random() * 500),
+          surfaceArea: 200 + Math.floor(Math.random() * 300),
+          stability: 70 + Math.floor(Math.random() * 20),
+          tempSensitivity: 4 + Math.floor(Math.random() * 4),
+          drillData: {
+            historicalTemp: [-20, -18, -15, -12, -10],
+            co2Levels: [280, 310, 340, 380, 410],
+            layerStrength: [9, 8, 7, 6, 5]
+          }
+        });
+        randomGlaciers.push(g);
+      }
       res.json(randomGlaciers);
     }
   });
 
   app.get(api.glaciers.get.path, async (req, res) => {
     const id = Number(req.params.id);
-    const glacier = generateRandomGlacier(id);
+    const glacier = await storage.getGlacier(id);
+    if (!glacier) {
+      return res.status(404).json({ message: "Glacier not found" });
+    }
     res.json(glacier);
   });
 
