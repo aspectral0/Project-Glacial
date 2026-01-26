@@ -17,7 +17,6 @@ export async function registerRoutes(
   
   app.get(api.glaciers.list.path, async (req, res) => {
     try {
-      // First try to get from database
       const existingGlaciers = await storage.getGlaciers();
       if (existingGlaciers.length > 0) {
         return res.json(existingGlaciers);
@@ -28,26 +27,26 @@ export async function registerRoutes(
         messages: [
           { 
             role: "system", 
-            content: "You are a scientific data generator. Return a JSON object with a 'glaciers' key containing an array of 3 real-world glaciers with their current stats (name, iceThickness in meters, surfaceArea in sq km, stability 0-100, tempSensitivity 1-10, and a description) and randomized historical drill data (historicalTemp array of 5 numbers, co2Levels array of 5 numbers, layerStrength array of 5 numbers). Respond ONLY with valid JSON." 
+            content: "You are a scientific research assistant. Provide authentic, real-world data for 3 major global glaciers (e.g., Jakobshavn Isbræ, Perito Moreno, Aletsch, Lambert, etc.). For each glacier, provide: name, iceThickness (meters), surfaceArea (sq km), stability (0-100), tempSensitivity (1-10), and a detailed 2-sentence description including its geographic location. Also provide realistic historical drill data: historicalTemp (5 values), co2Levels (5 values), and layerStrength (5 values). Respond ONLY with a JSON object containing a 'glaciers' array." 
           },
-          { role: "user", content: "Generate 3 real-world glaciers." }
+          { role: "user", content: "Fetch telemetry for 3 real glaciers." }
         ],
         response_format: { type: "json_object" }
       });
 
       const rawContent = response.choices[0].message.content || "{}";
       const data = JSON.parse(rawContent);
-      const glaciersList = data.glaciers || data.items || data.data || [];
+      const glaciersList = data.glaciers || [];
       
       const createdGlaciers = [];
       for (const g of glaciersList) {
         const glacier = await storage.createGlacier({
           name: g.name || "Unknown Glacier",
           description: g.description || `A unique glacier discovered in a remote region.`,
-          iceThickness: Number(g.iceThickness) || 500,
-          surfaceArea: Number(g.surfaceArea) || 100,
-          stability: Number(g.stability) || 80,
-          tempSensitivity: Number(g.tempSensitivity) || 5,
+          iceThickness: Math.round(Number(g.iceThickness)) || 500,
+          surfaceArea: Math.round(Number(g.surfaceArea)) || 100,
+          stability: Math.round(Number(g.stability)) || 80,
+          tempSensitivity: Math.round(Number(g.tempSensitivity)) || 5,
           drillData: g.drillData || {
             historicalTemp: [-20, -18, -15, -12, -10],
             co2Levels: [280, 310, 340, 380, 410],
@@ -57,41 +56,57 @@ export async function registerRoutes(
         createdGlaciers.push(glacier);
       }
 
-      if (createdGlaciers.length === 0) {
-        throw new Error("AI returned empty glacier list");
-      }
-
+      if (createdGlaciers.length === 0) throw new Error("Empty AI response");
       res.json(createdGlaciers);
     } catch (err) {
       console.error("AI Glacier List Error:", err);
-      const existing = await storage.getGlaciers();
-      if (existing.length > 0) return res.json(existing);
-      
-      const randomGlaciers = [];
       const fallbackData = [
-        { name: "Jakobshavn Isbræ", location: "Greenland" },
-        { name: "Lambert Glacier", location: "Antarctica" },
-        { name: "Perito Moreno", location: "Argentina" }
-      ];
-      
-      for (let i = 0; i < 3; i++) {
-        const fallback = fallbackData[i];
-        const g = await storage.createGlacier({
-          name: fallback.name,
-          description: `A significant glacier located in ${fallback.location}.`,
-          iceThickness: 800 + Math.floor(Math.random() * 500),
-          surfaceArea: 200 + Math.floor(Math.random() * 300),
-          stability: 70 + Math.floor(Math.random() * 20),
-          tempSensitivity: 4 + Math.floor(Math.random() * 4),
+        {
+          name: "Jakobshavn Isbræ",
+          description: "Located in western Greenland, it is one of the fastest moving glaciers in the world. It drains 6.5% of the Greenland ice sheet and produces 10% of all Greenland icebergs.",
+          iceThickness: 800,
+          surfaceArea: 110000,
+          stability: 35,
+          tempSensitivity: 9,
           drillData: {
-            historicalTemp: [-20, -18, -15, -12, -10],
-            co2Levels: [280, 310, 340, 380, 410],
+            historicalTemp: [-25, -23, -20, -18, -15],
+            co2Levels: [280, 310, 350, 390, 415],
             layerStrength: [9, 8, 7, 6, 5]
           }
-        });
-        randomGlaciers.push(g);
+        },
+        {
+          name: "Perito Moreno",
+          description: "Located in the Los Glaciares National Park in southwest Santa Cruz Province, Argentina. It is one of the few glaciers in the world that is currently in equilibrium rather than retreating.",
+          iceThickness: 170,
+          surfaceArea: 250,
+          stability: 85,
+          tempSensitivity: 4,
+          drillData: {
+            historicalTemp: [-10, -9, -8, -7, -6],
+            co2Levels: [285, 315, 345, 385, 418],
+            layerStrength: [8, 8, 7, 7, 7]
+          }
+        },
+        {
+          name: "Great Aletsch Glacier",
+          description: "The largest glacier in the eastern Bernese Alps in the Swiss canton of Valais. It has a length of about 23 km and covers more than 80 square km.",
+          iceThickness: 900,
+          surfaceArea: 81,
+          stability: 55,
+          tempSensitivity: 7,
+          drillData: {
+            historicalTemp: [-15, -14, -13, -11, -9],
+            co2Levels: [278, 305, 335, 375, 410],
+            layerStrength: [7, 7, 6, 5, 4]
+          }
+        }
+      ];
+
+      const created = [];
+      for (const f of fallbackData) {
+        created.push(await storage.createGlacier(f));
       }
-      res.json(randomGlaciers);
+      res.json(created);
     }
   });
 
