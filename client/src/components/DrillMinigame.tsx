@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Glacier } from "@shared/schema";
-import { Thermometer, Zap, ChevronDown, CheckCircle2, AlertTriangle, Mountain } from "lucide-react";
+import { Thermometer, Zap, ChevronDown, CheckCircle2, AlertTriangle, Mountain as MountainIcon } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 interface DrillMinigameProps {
@@ -189,7 +189,7 @@ export function DrillMinigame({ glacier, onComplete }: DrillMinigameProps) {
                   <div className="space-y-3">
                     <UnlockItem label="250m: Thermal Gradient" isUnlocked={revealed.temp} icon={<Thermometer className="w-2 h-2" />} />
                     <UnlockItem label="500m: Gas Sequestration" isUnlocked={revealed.co2} icon={<Zap className="w-2 h-2" />} />
-                    <UnlockItem label="750m: Crystalline Density" isUnlocked={revealed.strength} icon={<Mountain className="w-2 h-2" />} />
+                    <UnlockItem label="750m: Crystalline Density" isUnlocked={revealed.strength} icon={<MountainIcon className="w-2 h-2" />} />
                   </div>
                 </div>
               </div>

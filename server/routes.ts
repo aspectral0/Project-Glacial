@@ -18,7 +18,7 @@ export async function registerRoutes(
   app.get(api.glaciers.list.path, async (req, res) => {
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-5",
+        model: "gpt-4o",
         messages: [
           { 
             role: "system", 
@@ -80,7 +80,7 @@ export async function registerRoutes(
     try {
       const input = api.ai.predict.input.parse(req.body);
       const response = await openai.chat.completions.create({
-        model: "gpt-5",
+        model: "gpt-4o",
         messages: [
           { 
             role: "system", 
