@@ -7,6 +7,7 @@ export interface IStorage {
   getGlaciers(): Promise<Glacier[]>;
   getGlacier(id: number): Promise<Glacier | undefined>;
   createGlacier(glacier: any): Promise<Glacier>;
+  clearGlaciers(): Promise<void>;
 
   // Scores
   getScores(): Promise<Score[]>;
@@ -30,6 +31,10 @@ export class DatabaseStorage implements IStorage {
   async createGlacier(glacier: any): Promise<Glacier> {
     const [newGlacier] = await db.insert(glaciers).values(glacier).returning();
     return newGlacier;
+  }
+
+  async clearGlaciers(): Promise<void> {
+    await db.delete(glaciers);
   }
 
   // Scores

@@ -1,15 +1,16 @@
-import { useGlaciers } from "@/hooks/use-glaciers";
+import { useGlaciers, useRefreshGlaciers } from "@/hooks/use-glaciers";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DrillMinigame } from "@/components/DrillMinigame";
-import { ArrowRight, Mountain } from "lucide-react";
+import { ArrowRight, Mountain, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
 export default function SelectGlacier() {
   const { data: glaciers, isLoading, error } = useGlaciers();
+  const refreshMutation = useRefreshGlaciers();
   const [revealedStates, setRevealedStates] = useState<Record<number, any>>(() => {
     // Load initial revealed state from localStorage
     if (typeof window !== 'undefined') {
@@ -17,6 +18,11 @@ export default function SelectGlacier() {
     }
     return {};
   });
+  
+  const handleRefresh = () => {
+    setRevealedStates({});
+    refreshMutation.mutate();
+  };
 
   if (isLoading) {
     return (
@@ -63,7 +69,16 @@ export default function SelectGlacier() {
             </span>
           </motion.div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tighter text-white uppercase mb-4">Select Target</h1>
-          <p className="text-slate-400 font-mono text-xs">DECRYPTING REAL-TIME SATELLITE TELEMETRY...</p>
+          <p className="text-slate-400 font-mono text-xs mb-6">DECRYPTING REAL-TIME SATELLITE TELEMETRY...</p>
+          <Button 
+            onClick={handleRefresh}
+            disabled={refreshMutation.isPending}
+            className="bg-slate-800 hover:bg-slate-700 text-white font-mono text-xs tracking-widest uppercase border border-white/10"
+            data-testid="button-refresh-glaciers"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshMutation.isPending ? 'animate-spin' : ''}`} />
+            {refreshMutation.isPending ? 'SCANNING...' : 'SCAN NEW GLACIERS'}
+          </Button>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full pb-12">

@@ -22,14 +22,27 @@ export async function registerRoutes(
         return res.json(existingGlaciers);
       }
 
+      // List of possible glaciers for variety
+      const glacierOptions = [
+        "Jakobshavn Isbræ (Greenland)", "Perito Moreno (Argentina)", "Great Aletsch (Switzerland)",
+        "Lambert (Antarctica)", "Vatnajökull (Iceland)", "Gangotri (India)", "Siachen (Kashmir)",
+        "Franz Josef (New Zealand)", "Mendenhall (Alaska)", "Furtwängler (Tanzania)",
+        "Pasterze (Austria)", "Mer de Glace (France)", "Jostedalsbreen (Norway)",
+        "Hubbard (Alaska)", "Fox Glacier (New Zealand)", "Baltoro (Pakistan)"
+      ];
+      
+      // Shuffle and pick 3 random glaciers to suggest
+      const shuffled = glacierOptions.sort(() => Math.random() - 0.5);
+      const suggestions = shuffled.slice(0, 6).join(", ");
+
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           { 
             role: "system", 
-            content: "You are a scientific research assistant. Provide authentic, real-world data for 3 major global glaciers from different continents (e.g., Jakobshavn Isbræ in Greenland, Perito Moreno in Argentina, Great Aletsch in Switzerland, Lambert in Antarctica, Vatnajökull in Iceland, Gangotri in India). For each glacier, provide: name, iceThickness (meters), surfaceArea (sq km), stability (0-100), tempSensitivity (1-10), and a detailed 2-sentence description including its geographic location. Also provide realistic historical drill data: historicalTemp (5 values in Celsius, negative), co2Levels (5 values in ppm from 280-420), and layerStrength (5 values from 1-10). Respond ONLY with a JSON object containing a 'glaciers' array with exactly 3 glaciers." 
+            content: `You are a scientific research assistant. Provide authentic, real-world data for exactly 3 major global glaciers. Choose 3 different glaciers from these options: ${suggestions}. For each glacier, provide: name, iceThickness (meters), surfaceArea (sq km), stability (0-100), tempSensitivity (1-10), and a detailed 2-sentence description including its geographic location. Also provide realistic historical drill data: historicalTemp (5 values in Celsius, negative), co2Levels (5 values in ppm from 280-420), and layerStrength (5 values from 1-10). Respond ONLY with a JSON object containing a 'glaciers' array with exactly 3 glaciers.` 
           },
-          { role: "user", content: "Fetch telemetry for 3 real glaciers from around the world." }
+          { role: "user", content: `Fetch telemetry for 3 real glaciers. Seed: ${Date.now()}` }
         ],
         response_format: { type: "json_object" }
       });
@@ -117,6 +130,63 @@ export async function registerRoutes(
       return res.status(404).json({ message: "Glacier not found" });
     }
     res.json(glacier);
+  });
+
+  // Refresh glaciers - clears existing and generates new ones via AI
+  app.post(api.glaciers.refresh.path, async (req, res) => {
+    try {
+      await storage.clearGlaciers();
+      
+      const glacierOptions = [
+        "Jakobshavn Isbræ (Greenland)", "Perito Moreno (Argentina)", "Great Aletsch (Switzerland)",
+        "Lambert (Antarctica)", "Vatnajökull (Iceland)", "Gangotri (India)", "Siachen (Kashmir)",
+        "Franz Josef (New Zealand)", "Mendenhall (Alaska)", "Furtwängler (Tanzania)",
+        "Pasterze (Austria)", "Mer de Glace (France)", "Jostedalsbreen (Norway)",
+        "Hubbard (Alaska)", "Fox Glacier (New Zealand)", "Baltoro (Pakistan)"
+      ];
+      
+      const shuffled = glacierOptions.sort(() => Math.random() - 0.5);
+      const suggestions = shuffled.slice(0, 6).join(", ");
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { 
+            role: "system", 
+            content: `You are a scientific research assistant. Provide authentic, real-world data for exactly 3 major global glaciers. Choose 3 different glaciers from these options: ${suggestions}. For each glacier, provide: name, iceThickness (meters), surfaceArea (sq km), stability (0-100), tempSensitivity (1-10), and a detailed 2-sentence description including its geographic location. Also provide realistic historical drill data: historicalTemp (5 values in Celsius, negative), co2Levels (5 values in ppm from 280-420), and layerStrength (5 values from 1-10). Respond ONLY with a JSON object containing a 'glaciers' array with exactly 3 glaciers.` 
+          },
+          { role: "user", content: `Fetch telemetry for 3 real glaciers. Seed: ${Date.now()}` }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const rawContent = response.choices[0].message.content || "{}";
+      const data = JSON.parse(rawContent);
+      const glaciersList = data.glaciers || [];
+      
+      const createdGlaciers = [];
+      for (const g of glaciersList) {
+        const glacier = await storage.createGlacier({
+          name: g.name || "Unknown Glacier",
+          description: g.description || `A unique glacier discovered in a remote region.`,
+          iceThickness: Math.round(Number(g.iceThickness)) || 500,
+          surfaceArea: Math.round(Number(g.surfaceArea)) || 100,
+          stability: Math.round(Number(g.stability)) || 80,
+          tempSensitivity: Math.round(Number(g.tempSensitivity)) || 5,
+          drillData: g.drillData || {
+            historicalTemp: [-20, -18, -15, -12, -10],
+            co2Levels: [280, 310, 340, 380, 410],
+            layerStrength: [9, 8, 7, 6, 5]
+          }
+        });
+        createdGlaciers.push(glacier);
+      }
+
+      res.json(createdGlaciers);
+    } catch (err) {
+      console.error("AI Glacier Refresh Error:", err);
+      res.status(500).json({ message: "Failed to refresh glaciers" });
+    }
   });
 
   app.get(api.scores.list.path, async (req, res) => {

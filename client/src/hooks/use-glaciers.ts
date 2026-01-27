@@ -13,6 +13,24 @@ export function useGlaciers() {
   });
 }
 
+export function useRefreshGlaciers() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch(api.glaciers.refresh.path, {
+        method: api.glaciers.refresh.method,
+      });
+      if (!res.ok) throw new Error("Failed to refresh glaciers");
+      return api.glaciers.refresh.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      // Clear unlocked glaciers from localStorage
+      localStorage.removeItem('unlocked_glaciers');
+      queryClient.invalidateQueries({ queryKey: [api.glaciers.list.path] });
+    },
+  });
+}
+
 export function useGlacier(id: number) {
   return useQuery({
     queryKey: [api.glaciers.get.path, id],

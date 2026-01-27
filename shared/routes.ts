@@ -37,6 +37,13 @@ export const api = {
         404: errorSchemas.notFound,
       },
     },
+    refresh: {
+      method: 'POST' as const,
+      path: '/api/glaciers/refresh',
+      responses: {
+        200: z.array(z.custom<typeof glaciers.$inferSelect>()),
+      },
+    },
   },
   scores: {
     list: {
