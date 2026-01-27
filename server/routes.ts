@@ -27,9 +27,9 @@ export async function registerRoutes(
         messages: [
           { 
             role: "system", 
-            content: "You are a scientific research assistant. Provide authentic, real-world data for 6 major global glaciers from different continents (e.g., Jakobshavn Isbræ in Greenland, Perito Moreno in Argentina, Great Aletsch in Switzerland, Lambert in Antarctica, Vatnajökull in Iceland, Gangotri in India, Siachen in Kashmir, Franz Josef in New Zealand). For each glacier, provide: name, iceThickness (meters), surfaceArea (sq km), stability (0-100), tempSensitivity (1-10), and a detailed 2-sentence description including its geographic location. Also provide realistic historical drill data: historicalTemp (5 values in Celsius, negative), co2Levels (5 values in ppm from 280-420), and layerStrength (5 values from 1-10). Respond ONLY with a JSON object containing a 'glaciers' array with exactly 6 glaciers." 
+            content: "You are a scientific research assistant. Provide authentic, real-world data for 3 major global glaciers from different continents (e.g., Jakobshavn Isbræ in Greenland, Perito Moreno in Argentina, Great Aletsch in Switzerland, Lambert in Antarctica, Vatnajökull in Iceland, Gangotri in India). For each glacier, provide: name, iceThickness (meters), surfaceArea (sq km), stability (0-100), tempSensitivity (1-10), and a detailed 2-sentence description including its geographic location. Also provide realistic historical drill data: historicalTemp (5 values in Celsius, negative), co2Levels (5 values in ppm from 280-420), and layerStrength (5 values from 1-10). Respond ONLY with a JSON object containing a 'glaciers' array with exactly 3 glaciers." 
           },
-          { role: "user", content: "Fetch telemetry for 6 real glaciers from around the world." }
+          { role: "user", content: "Fetch telemetry for 3 real glaciers from around the world." }
         ],
         response_format: { type: "json_object" }
       });
