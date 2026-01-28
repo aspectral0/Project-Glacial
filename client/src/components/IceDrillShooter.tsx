@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Glacier } from "@shared/schema";
-import { Crosshair, Shield, Zap, Heart, Target, Trophy, ArrowUp } from "lucide-react";
+import { Crosshair, Zap, Heart, Target, Trophy, ArrowUp } from "lucide-react";
 
 interface IceDrillShooterProps {
   glacier: Glacier;
@@ -17,6 +17,7 @@ interface Player {
   speed: number;
   damage: number;
   fireRate: number;
+  angle: number;
 }
 
 interface Bullet {
@@ -48,6 +49,7 @@ interface Upgrade {
 
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 400;
+const BULLET_SPEED = 12;
 
 export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -65,16 +67,24 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
     maxHealth: 100,
     speed: 5,
     damage: 25,
-    fireRate: 200
+    fireRate: 200,
+    angle: -Math.PI / 2
   });
   
   const bulletsRef = useRef<Bullet[]>([]);
   const enemiesRef = useRef<Enemy[]>([]);
-  const keysRef = useRef<Set<string>>(new Set());
+  const keysRef = useRef<{ [key: string]: boolean }>({});
+  const mouseRef = useRef({ x: CANVAS_WIDTH / 2, y: 0, shooting: false });
   const lastShotRef = useRef(0);
   const animationFrameRef = useRef<number>();
+  const gameStateRef = useRef(gameState);
   const [displayHealth, setDisplayHealth] = useState(100);
   const [enemyCount, setEnemyCount] = useState(0);
+
+  // Keep gameStateRef in sync
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
 
   const upgrades: Upgrade[] = [
     {
@@ -148,6 +158,7 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
     setGameState('playing');
     spawnEnemies(lvl);
     bulletsRef.current = [];
+    keysRef.current = {};
     
     if (lvl === 2) setUnlockedData(d => ({ ...d, temp: true }));
     if (lvl === 4) setUnlockedData(d => ({ ...d, co2: true }));
@@ -162,7 +173,25 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
     }
   };
 
+  const shootBullet = useCallback(() => {
+    const player = playerRef.current;
+    const now = Date.now();
+    if (now - lastShotRef.current > player.fireRate) {
+      const dx = Math.cos(player.angle) * BULLET_SPEED;
+      const dy = Math.sin(player.angle) * BULLET_SPEED;
+      bulletsRef.current.push({ 
+        x: player.x + Math.cos(player.angle) * 20, 
+        y: player.y + Math.sin(player.angle) * 20, 
+        dx, 
+        dy 
+      });
+      lastShotRef.current = now;
+    }
+  }, []);
+
   const gameLoop = useCallback(() => {
+    if (gameStateRef.current !== 'playing') return;
+    
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -172,6 +201,7 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
     const bullets = bulletsRef.current;
     const enemies = enemiesRef.current;
     const keys = keysRef.current;
+    const mouse = mouseRef.current;
 
     // Clear
     ctx.fillStyle = '#020617';
@@ -192,17 +222,18 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
       ctx.stroke();
     }
 
-    // Player movement
-    if (keys.has('ArrowLeft') || keys.has('a')) player.x = Math.max(20, player.x - player.speed);
-    if (keys.has('ArrowRight') || keys.has('d')) player.x = Math.min(CANVAS_WIDTH - 20, player.x + player.speed);
-    if (keys.has('ArrowUp') || keys.has('w')) player.y = Math.max(20, player.y - player.speed);
-    if (keys.has('ArrowDown') || keys.has('s')) player.y = Math.min(CANVAS_HEIGHT - 20, player.y + player.speed);
+    // Calculate angle to mouse
+    player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
 
-    // Shooting
-    const now = Date.now();
-    if (keys.has(' ') && now - lastShotRef.current > player.fireRate) {
-      bullets.push({ x: player.x, y: player.y - 15, dx: 0, dy: -10 });
-      lastShotRef.current = now;
+    // Player movement
+    if (keys['w'] || keys['arrowup']) player.y = Math.max(20, player.y - player.speed);
+    if (keys['s'] || keys['arrowdown']) player.y = Math.min(CANVAS_HEIGHT - 20, player.y + player.speed);
+    if (keys['a'] || keys['arrowleft']) player.x = Math.max(20, player.x - player.speed);
+    if (keys['d'] || keys['arrowright']) player.x = Math.min(CANVAS_WIDTH - 20, player.x + player.speed);
+
+    // Shooting with mouse or space
+    if (mouse.shooting || keys[' ']) {
+      shootBullet();
     }
 
     // Update bullets
@@ -216,13 +247,16 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
     }
 
     // Update enemies
+    const now = Date.now();
     for (const enemy of enemies) {
       if (enemy.type === 'boss') {
         enemy.x += Math.sin(now / 500) * 2;
+        enemy.x = Math.max(50, Math.min(CANVAS_WIDTH - 50, enemy.x));
         if (now - (enemy.lastShot || 0) > 800) {
-          bullets.push({ x: enemy.x, y: enemy.y + 30, dx: 0, dy: 5, isEnemy: true });
-          bullets.push({ x: enemy.x - 20, y: enemy.y + 30, dx: -1, dy: 5, isEnemy: true });
-          bullets.push({ x: enemy.x + 20, y: enemy.y + 30, dx: 1, dy: 5, isEnemy: true });
+          const angleToPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+          bullets.push({ x: enemy.x, y: enemy.y + 30, dx: Math.cos(angleToPlayer) * 4, dy: Math.sin(angleToPlayer) * 4, isEnemy: true });
+          bullets.push({ x: enemy.x - 20, y: enemy.y + 30, dx: Math.cos(angleToPlayer - 0.3) * 4, dy: Math.sin(angleToPlayer - 0.3) * 4, isEnemy: true });
+          bullets.push({ x: enemy.x + 20, y: enemy.y + 30, dx: Math.cos(angleToPlayer + 0.3) * 4, dy: Math.sin(angleToPlayer + 0.3) * 4, isEnemy: true });
           enemy.lastShot = now;
         }
       } else {
@@ -283,23 +317,52 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
       const dy = e.y - player.y;
       const hitDist = e.type === 'boss' ? 50 : 30;
       if (dx * dx + dy * dy < hitDist * hitDist) {
-        player.health -= 1;
-        setDisplayHealth(player.health);
+        player.health -= 0.5;
+        setDisplayHealth(Math.floor(player.health));
       }
     }
 
-    // Draw player
+    // Draw aiming line
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(
+      player.x + Math.cos(player.angle) * 80,
+      player.y + Math.sin(player.angle) * 80
+    );
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw player (rotates toward mouse)
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.angle + Math.PI / 2);
     ctx.fillStyle = '#3b82f6';
     ctx.beginPath();
-    ctx.moveTo(player.x, player.y - 15);
-    ctx.lineTo(player.x - 12, player.y + 10);
-    ctx.lineTo(player.x + 12, player.y + 10);
+    ctx.moveTo(0, -15);
+    ctx.lineTo(-12, 10);
+    ctx.lineTo(12, 10);
     ctx.closePath();
     ctx.fill();
     ctx.shadowColor = '#3b82f6';
     ctx.shadowBlur = 10;
     ctx.fill();
     ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // Draw crosshair at mouse
+    ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(mouse.x - 15, mouse.y);
+    ctx.lineTo(mouse.x + 15, mouse.y);
+    ctx.moveTo(mouse.x, mouse.y - 15);
+    ctx.lineTo(mouse.x, mouse.y + 15);
+    ctx.stroke();
 
     // Draw bullets
     for (const b of bullets) {
@@ -341,8 +404,9 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
     }
 
     if (enemies.length === 0) {
-      const isBossLevel = level % 3 === 0;
-      if (isBossLevel && level >= 9) {
+      const currentLevel = level;
+      const isBossLevel = currentLevel % 3 === 0;
+      if (isBossLevel && currentLevel >= 9) {
         setUnlockedData({ temp: true, co2: true, strength: true, full: true });
         setGameState('victory');
         onComplete?.();
@@ -353,30 +417,68 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
     }
 
     animationFrameRef.current = requestAnimationFrame(gameLoop);
-  }, [level, onComplete]);
+  }, [level, onComplete, shootBullet]);
 
   useEffect(() => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing') {
+      keysRef.current = {};
+      return;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      keysRef.current.add(e.key.toLowerCase());
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+      const key = e.key.toLowerCase();
+      keysRef.current[key] = true;
+      if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) {
         e.preventDefault();
       }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
-      keysRef.current.delete(e.key.toLowerCase());
+      const key = e.key.toLowerCase();
+      keysRef.current[key] = false;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      mouseRef.current.x = e.clientX - rect.left;
+      mouseRef.current.y = e.clientY - rect.top;
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button === 0) {
+        mouseRef.current.shooting = true;
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (e.button === 0) {
+        mouseRef.current.shooting = false;
+      }
+    };
+
+    const handleBlur = () => {
+      keysRef.current = {};
+      mouseRef.current.shooting = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('blur', handleBlur);
     
     animationFrameRef.current = requestAnimationFrame(gameLoop);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('blur', handleBlur);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -391,8 +493,10 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
       maxHealth: 100,
       speed: 5,
       damage: 25,
-      fireRate: 200
+      fireRate: 200,
+      angle: -Math.PI / 2
     };
+    keysRef.current = {};
     setDisplayHealth(100);
     setLevel(1);
     setScore(0);
@@ -405,7 +509,8 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
     <Dialog open={isOpen} onOpenChange={(open) => {
       setIsOpen(open);
       if (!open) {
-        keysRef.current.clear();
+        keysRef.current = {};
+        mouseRef.current.shooting = false;
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
         }
@@ -432,14 +537,14 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
 
           {gameState === 'menu' && (
             <div className="text-center space-y-6 py-8">
-              <div className="text-6xl mb-4">🎮</div>
+              <Crosshair className="w-16 h-16 text-blue-400 mx-auto" />
               <h2 className="text-2xl font-bold">ICE DRILL SHOOTER</h2>
               <p className="text-slate-400 text-sm max-w-md mx-auto">
                 Fight through enemy drones to extract glacier data. Defeat bosses every 3 levels to unlock critical information.
               </p>
               <div className="text-xs text-slate-500 space-y-1">
                 <p>WASD or Arrow Keys to move</p>
-                <p>SPACE to shoot</p>
+                <p>Mouse to aim, Click to shoot</p>
               </div>
               <Button onClick={() => startLevel(1)} className="bg-blue-600 hover:bg-blue-500 px-8 py-6 text-lg">
                 START MISSION
@@ -475,7 +580,7 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
                 ref={canvasRef} 
                 width={CANVAS_WIDTH} 
                 height={CANVAS_HEIGHT}
-                className="border border-blue-500/20 rounded bg-slate-950 mx-auto block"
+                className="border border-blue-500/20 rounded bg-slate-950 mx-auto block cursor-crosshair"
               />
               
               <div className="flex justify-center gap-2">
