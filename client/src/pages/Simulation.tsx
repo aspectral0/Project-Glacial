@@ -5,17 +5,18 @@ import { GlacierCanvas } from "@/components/GlacierCanvas";
 import { EnvironmentalControls } from "@/components/EnvironmentalControls";
 import { AIForecast } from "@/components/AIForecast";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, AlertTriangle, ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle, RefreshCw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Simulation() {
   const { id } = useParams();
   const [_, setLocation] = useLocation();
   const { data: glacier, isLoading, error } = useGlacier(Number(id));
+  const { toast } = useToast();
   
   const { 
     state, 
@@ -23,6 +24,16 @@ export default function Simulation() {
     pauseSimulation, 
     setEnvironmentFactor 
   } = useSimulation(glacier);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error Loading Glacier",
+        description: "Failed to load glacier data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   useEffect(() => {
     // Check if the drill session was completed for this glacier
@@ -48,12 +59,37 @@ export default function Simulation() {
     }
   }, [state?.isGameOver, state?.gameResult, state?.year, state?.glacierStats, glacier?.name, setLocation]);
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center gap-6">
+        <AlertCircle className="w-16 h-16 text-red-500" />
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-bold text-red-400">Failed to Load Glacier Data</h2>
+          <p className="text-slate-400 text-sm max-w-md">
+            Unable to retrieve glacier information. This may be due to a network issue or the glacier data being unavailable.
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <Button onClick={() => window.location.reload()} variant="outline" className="border-slate-600" data-testid="button-retry-simulation">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
+          <Button onClick={() => setLocation('/')} className="bg-blue-600 hover:bg-blue-500" data-testid="button-back-home">
+            Back to Selection
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading || !state) {
     return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center gap-4">
+        <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
         <div className="text-blue-400 font-mono animate-pulse tracking-widest uppercase">
           Initializing Glacial Environment...
         </div>
+        <div className="text-slate-500 text-xs font-mono">Loading simulation parameters</div>
       </div>
     );
   }
@@ -100,8 +136,8 @@ export default function Simulation() {
 
       <main className="flex-1 flex overflow-hidden">
         {/* Left: Visualization */}
-        <div className="flex-1 relative bg-slate-950/40">
-          <GlacierCanvas stats={state.glacierStats} />
+        <div className="flex-1 relative bg-slate-950/40 p-4">
+          <GlacierCanvas stats={state.glacierStats} environment={state.environmentalFactors} />
           
           <AnimatePresence>
             {state.isGameOver && (

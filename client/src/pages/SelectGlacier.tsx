@@ -3,24 +3,42 @@ import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { IceDrillShooter } from "@/components/IceDrillShooter";
-import { ArrowRight, Mountain, RefreshCw } from "lucide-react";
+import { ArrowRight, Mountain, RefreshCw, AlertCircle, WifiOff, Satellite } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SelectGlacier() {
-  const { data: glaciers, isLoading, error } = useGlaciers();
+  const { data: glaciers, isLoading, error, refetch } = useGlaciers();
   const refreshMutation = useRefreshGlaciers();
+  const { toast } = useToast();
   const [revealedStates, setRevealedStates] = useState<Record<number, any>>(() => {
-    // Load initial revealed state from localStorage
     if (typeof window !== 'undefined') {
       return JSON.parse(localStorage.getItem('unlocked_glaciers') || '{}');
     }
     return {};
   });
+
+  useEffect(() => {
+    if (refreshMutation.isError) {
+      toast({
+        title: "Scan Failed",
+        description: "Unable to discover new glaciers. The AI satellite uplink may be experiencing issues. Please try again.",
+        variant: "destructive",
+      });
+    }
+    if (refreshMutation.isSuccess) {
+      toast({
+        title: "Scan Complete",
+        description: "New glacier targets discovered and catalogued.",
+      });
+    }
+  }, [refreshMutation.isError, refreshMutation.isSuccess, toast]);
   
   const handleRefresh = () => {
     setRevealedStates({});
+    localStorage.removeItem('unlocked_glaciers');
     refreshMutation.mutate();
   };
 
@@ -39,8 +57,39 @@ export default function SelectGlacier() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-white p-4">
-        <h1 className="text-2xl font-mono text-red-500 mb-4">CONNECTION ERROR</h1>
-        <Button onClick={() => window.location.reload()} className="bg-blue-600">RETRY SYNC</Button>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center space-y-6 max-w-md"
+        >
+          <div className="relative inline-block">
+            <WifiOff className="w-20 h-20 text-red-500" />
+            <AlertCircle className="w-8 h-8 text-red-400 absolute -bottom-1 -right-1" />
+          </div>
+          <h1 className="text-2xl font-mono font-bold text-red-400">SATELLITE UPLINK FAILED</h1>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            Unable to establish connection with the glacier monitoring network. 
+            This could be due to network issues or server maintenance.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Button 
+              onClick={() => refetch()} 
+              variant="outline" 
+              className="border-slate-600"
+              data-testid="button-retry-connection"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry Connection
+            </Button>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="bg-blue-600 hover:bg-blue-500"
+              data-testid="button-reload-page"
+            >
+              Reload Page
+            </Button>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -50,9 +99,27 @@ export default function SelectGlacier() {
   if (glacierList.length === 0) {
     return (
       <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-white p-4">
-        <h1 className="text-2xl font-mono text-blue-500 mb-4">NO GLACIERS FOUND</h1>
-        <p className="text-slate-400 mb-4">The satellite network returned no data.</p>
-        <Button onClick={() => window.location.reload()} className="bg-blue-600">REFRESH</Button>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center space-y-6 max-w-md"
+        >
+          <Satellite className="w-20 h-20 text-blue-500 mx-auto animate-pulse" />
+          <h1 className="text-2xl font-mono font-bold text-blue-400">NO TARGETS DETECTED</h1>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            The satellite network has not catalogued any glaciers yet. 
+            Initialize a scan to discover glacier targets in the monitoring zone.
+          </p>
+          <Button 
+            onClick={handleRefresh}
+            disabled={refreshMutation.isPending}
+            className="bg-blue-600 hover:bg-blue-500"
+            data-testid="button-initial-scan"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshMutation.isPending ? 'animate-spin' : ''}`} />
+            {refreshMutation.isPending ? 'SCANNING...' : 'INITIATE SCAN'}
+          </Button>
+        </motion.div>
       </div>
     );
   }
