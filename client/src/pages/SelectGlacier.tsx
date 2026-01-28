@@ -2,7 +2,7 @@ import { useGlaciers, useRefreshGlaciers } from "@/hooks/use-glaciers";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DrillMinigame } from "@/components/DrillMinigame";
+import { IceDrillShooter } from "@/components/IceDrillShooter";
 import { ArrowRight, Mountain, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
@@ -119,11 +119,10 @@ export default function SelectGlacier() {
                 </div>
 
                 <div className="space-y-3 mt-auto">
-                  <DrillMinigame 
+                  <IceDrillShooter 
                     glacier={glacier} 
-                    onComplete={(revealed) => {
+                    onComplete={() => {
                       setRevealedStates(prev => ({ ...prev, [glacier.id]: true }));
-                      // Persist unlock state
                       const unlocked = JSON.parse(localStorage.getItem('unlocked_glaciers') || '{}');
                       unlocked[glacier.id] = true;
                       localStorage.setItem('unlocked_glaciers', JSON.stringify(unlocked));
@@ -134,6 +133,7 @@ export default function SelectGlacier() {
                     <Button 
                       className="w-full h-12 bg-blue-600 hover:bg-blue-500 text-white font-bold font-mono tracking-widest uppercase transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
                       disabled={!revealedStates[glacier.id]}
+                      data-testid={`button-simulate-${glacier.id}`}
                     >
                       {revealedStates[glacier.id] ? 'INITIALIZE SIM' : 'DATA ENCRYPTED'}
                       <ArrowRight className="w-4 h-4 ml-2" />
