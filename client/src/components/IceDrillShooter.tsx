@@ -1020,85 +1020,134 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
       <DialogTrigger asChild>
         <Button 
           variant="outline" 
-          className={`w-full border-blue-500/30 hover:bg-blue-500/10 ${unlockedData.full ? 'border-green-500/50 bg-green-500/5' : ''}`}
+          className={`w-full h-11 font-mono text-xs tracking-wider uppercase transition-all duration-300 ${
+            unlockedData.full 
+              ? 'border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20' 
+              : 'border-cyan-500/30 bg-cyan-500/5 text-cyan-400 hover:bg-cyan-500/15 hover:border-cyan-400/50'
+          }`}
           data-testid="button-start-drill-game"
         >
           <Crosshair className="w-4 h-4 mr-2" />
-          {unlockedData.full ? 'GLACIER UNLOCKED' : 'Launch Ice Drill Mission'}
+          {unlockedData.full ? 'DATA EXTRACTED' : 'Ice Drill Mission'}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[750px] bg-slate-950 border-blue-500/20 text-white p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[780px] bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border-cyan-500/20 text-white p-0 overflow-hidden shadow-2xl shadow-cyan-500/10">
         <DialogDescription className="sr-only">Ice Core Extraction shooter game</DialogDescription>
-        <div className="p-6">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-xl font-mono tracking-tight uppercase text-blue-400 flex items-center gap-2">
-              <Crosshair className="w-5 h-5" />
-              Ice Core Extraction // {glacier.name}
-            </DialogTitle>
+        
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 400 400\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
+        
+        <div className="relative p-6">
+          <DialogHeader className="mb-5">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-mono tracking-wider uppercase text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                  <Crosshair className="w-5 h-5 text-cyan-400" />
+                </div>
+                Ice Core Extraction
+              </DialogTitle>
+              <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                {glacier.name}
+              </div>
+            </div>
           </DialogHeader>
 
           {gameState === 'menu' && (
-            <div className="text-center space-y-6 py-8">
+            <div className="text-center space-y-8 py-8">
               <div className="relative inline-block">
-                <Crosshair className="w-20 h-20 text-blue-400 animate-pulse" />
-                <Sparkles className="w-6 h-6 text-cyan-400 absolute -top-2 -right-2 animate-bounce" />
-              </div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                ICE DRILL SHOOTER
-              </h2>
-              <p className="text-slate-400 text-sm max-w-md mx-auto">
-                Fight through enemy drones to extract glacier data. Collect power-ups, defeat bosses, and unlock critical research data.
-              </p>
-              <div className="grid grid-cols-2 gap-4 text-xs text-slate-500 max-w-xs mx-auto">
-                <div className="p-3 bg-slate-900/50 rounded border border-slate-800">
-                  <div className="font-bold text-blue-400 mb-1">MOVE</div>
-                  <div>WASD / Arrows</div>
+                <div className="absolute inset-0 bg-cyan-500/20 blur-3xl rounded-full" />
+                <div className="relative p-6 rounded-full bg-gradient-to-b from-cyan-500/20 to-transparent border border-cyan-500/30">
+                  <Crosshair className="w-16 h-16 text-cyan-400" />
                 </div>
-                <div className="p-3 bg-slate-900/50 rounded border border-slate-800">
-                  <div className="font-bold text-blue-400 mb-1">SHOOT</div>
-                  <div>Mouse Click</div>
+                <Sparkles className="w-5 h-5 text-yellow-400 absolute -top-1 -right-1 animate-pulse" />
+              </div>
+              
+              <div className="space-y-3">
+                <h2 className="text-3xl font-bold tracking-tight">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400">
+                    ICE DRILL SHOOTER
+                  </span>
+                </h2>
+                <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
+                  Fight through enemy drones to extract glacier data. Collect power-ups, defeat bosses, and unlock critical research data.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto">
+                <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
+                  <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider mb-1">Move</div>
+                  <div className="text-sm text-white font-medium">WASD / Arrows</div>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
+                  <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider mb-1">Shoot</div>
+                  <div className="text-sm text-white font-medium">Mouse Click</div>
                 </div>
               </div>
-              <Button onClick={() => startLevel(1)} className="bg-blue-600 hover:bg-blue-500 px-10 py-6 text-lg font-bold">
-                START MISSION
+              
+              <Button 
+                onClick={() => startLevel(1)} 
+                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-12 py-6 text-lg font-bold uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all duration-300"
+                data-testid="button-start-mission"
+              >
+                <Target className="w-5 h-5 mr-2" />
+                Start Mission
               </Button>
             </div>
           )}
 
           {gameState === 'playing' && (
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs font-mono">
-                <div className="flex gap-4 items-center">
-                  <span className="text-blue-400 font-bold">LEVEL {level}</span>
-                  <span className="text-slate-400">ENEMIES: {enemyCount}</span>
-                  <span className="px-2 py-0.5 bg-slate-800 rounded text-cyan-400">{currentWeapon}</span>
+              <div className="flex justify-between items-center">
+                <div className="flex gap-3 items-center">
+                  <div className="px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                    <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">Level {level}</span>
+                  </div>
+                  <div className="text-[10px] font-mono text-slate-500 uppercase">
+                    <span className="text-slate-400">{enemyCount}</span> Hostiles
+                  </div>
+                  <div className="px-2 py-1 rounded bg-slate-800/80 border border-slate-700/50">
+                    <span className="text-[10px] font-mono text-cyan-300">{currentWeapon}</span>
+                  </div>
                 </div>
                 <div className="flex gap-4 items-center">
                   {showCombo && combo > 1 && (
-                    <span className="text-yellow-400 animate-pulse font-bold">x{combo} COMBO!</span>
+                    <span className="text-yellow-400 animate-pulse font-bold text-sm">x{combo} COMBO</span>
                   )}
-                  <span className="text-green-400">SCORE: {score}</span>
-                  <span className="text-yellow-400">CREDITS: {credits}</span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                    <Target className="w-3 h-3 text-green-400" />
+                    <span className="text-xs font-mono text-green-400">{score}</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                    <Sparkles className="w-3 h-3 text-yellow-400" />
+                    <span className="text-xs font-mono text-yellow-400">{credits}</span>
+                  </div>
                 </div>
               </div>
               
-              <div className="flex gap-4">
-                <div className="flex-1 flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-red-500" />
-                  <div className="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all"
-                      style={{ width: `${(displayHealth / playerRef.current.maxHealth) * 100}%` }}
-                    />
+              <div className="flex gap-4 p-3 rounded-lg bg-slate-900/50 border border-slate-800/50">
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="p-1.5 rounded bg-red-500/10 border border-red-500/20">
+                    <Heart className="w-3.5 h-3.5 text-red-400" />
                   </div>
-                  <span className="text-xs font-mono text-red-400 w-16 text-right">{displayHealth}/{playerRef.current.maxHealth}</span>
+                  <div className="flex-1">
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-300 rounded-full"
+                        style={{ width: `${(displayHealth / playerRef.current.maxHealth) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-red-400 w-14 text-right">{displayHealth}/{playerRef.current.maxHealth}</span>
                 </div>
                 {displayShield > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-blue-400" />
-                    <div className="w-20 h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded bg-blue-500/10 border border-blue-500/20">
+                      <Shield className="w-3.5 h-3.5 text-blue-400" />
+                    </div>
+                    <div className="w-16 h-2 bg-slate-800 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all"
+                        className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-300 rounded-full"
                         style={{ width: `${displayShield}%` }}
                       />
                     </div>
@@ -1106,18 +1155,27 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
                 )}
               </div>
 
-              <canvas 
-                ref={canvasRef} 
-                width={CANVAS_WIDTH} 
-                height={CANVAS_HEIGHT}
-                className="border border-blue-500/20 rounded-lg bg-slate-950 mx-auto block cursor-none w-full"
-                style={{ imageRendering: 'pixelated' }}
-              />
+              <div className="relative rounded-xl overflow-hidden border border-cyan-500/20 shadow-lg shadow-cyan-500/5">
+                <canvas 
+                  ref={canvasRef} 
+                  width={CANVAS_WIDTH} 
+                  height={CANVAS_HEIGHT}
+                  className="bg-slate-950 mx-auto block cursor-none w-full"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+                <div className="absolute inset-0 pointer-events-none border border-white/5 rounded-xl" />
+              </div>
               
               <div className="flex justify-center gap-2">
-                {unlockedData.temp && <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-[10px] rounded font-mono">THERMAL</span>}
-                {unlockedData.co2 && <span className="px-2 py-1 bg-green-500/20 text-green-400 text-[10px] rounded font-mono">CO2</span>}
-                {unlockedData.strength && <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-[10px] rounded font-mono">DENSITY</span>}
+                {unlockedData.temp && (
+                  <span className="px-3 py-1 bg-blue-500/15 border border-blue-500/30 text-blue-400 text-[9px] rounded-full font-mono uppercase tracking-wider">Thermal</span>
+                )}
+                {unlockedData.co2 && (
+                  <span className="px-3 py-1 bg-green-500/15 border border-green-500/30 text-green-400 text-[9px] rounded-full font-mono uppercase tracking-wider">CO2</span>
+                )}
+                {unlockedData.strength && (
+                  <span className="px-3 py-1 bg-purple-500/15 border border-purple-500/30 text-purple-400 text-[9px] rounded-full font-mono uppercase tracking-wider">Density</span>
+                )}
               </div>
             </div>
           )}
