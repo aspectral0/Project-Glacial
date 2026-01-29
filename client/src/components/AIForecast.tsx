@@ -1,8 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BrainCircuit, Loader2 } from "lucide-react";
+import { BrainCircuit, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AIForecastProps {
@@ -37,7 +36,6 @@ export function AIForecast({ glacierName, stats, environment }: AIForecastProps)
     }
   });
 
-  // Debounced effect for AI calls
   useEffect(() => {
     const timer = setTimeout(() => {
       mutation.mutate();
@@ -46,23 +44,40 @@ export function AIForecast({ glacierName, stats, environment }: AIForecastProps)
   }, [environment]);
 
   return (
-    <Card className="bg-slate-900/50 border-blue-500/20 backdrop-blur-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-mono text-blue-400 flex items-center gap-2">
-          <BrainCircuit className="w-4 h-4" />
-          AI GLACIOLOGIST FORECAST
-        </CardTitle>
-        {mutation.isPending && <Loader2 className="w-3 h-3 animate-spin text-blue-400" />}
-      </CardHeader>
-      <CardContent>
-        {lastPrediction ? (
-          <p className="text-xs leading-relaxed text-slate-300 italic">
-            "{lastPrediction}"
-          </p>
+    <section className="space-y-3">
+      <h3 className="text-[10px] font-mono uppercase tracking-widest text-blue-500/60 mb-2 border-b border-white/5 pb-2 flex items-center gap-2">
+        <BrainCircuit className="w-3 h-3" />
+        AI Analysis
+        {mutation.isPending && <Loader2 className="w-3 h-3 animate-spin ml-auto" />}
+      </h3>
+      
+      <div className="stat-card rounded-lg p-4 relative overflow-hidden">
+        <div className="absolute top-2 right-2">
+          <Sparkles className="w-4 h-4 text-purple-400/50" />
+        </div>
+        
+        {mutation.isError ? (
+          <div className="flex items-center gap-2 text-red-400">
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-xs">Analysis unavailable</span>
+          </div>
+        ) : lastPrediction ? (
+          <div className="space-y-2">
+            <p className="text-xs leading-relaxed text-slate-300 font-medium">
+              "{lastPrediction}"
+            </p>
+            <div className="flex items-center gap-1 text-[9px] text-slate-500 font-mono">
+              <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
+              AI GLACIOLOGIST // LIVE
+            </div>
+          </div>
         ) : (
-          <p className="text-xs text-slate-500">Analyzing environmental vectors...</p>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="text-xs text-slate-500 font-mono">Analyzing environmental vectors...</span>
+          </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
