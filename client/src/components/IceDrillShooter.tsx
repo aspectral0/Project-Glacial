@@ -680,7 +680,7 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
                   </span>
                 </h2>
                 <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
-                  Fight through enemy drones to extract glacier data. Collect power-ups, defeat bosses, and unlock critical research data.
+                  Fight through carbon dioxide-emitting enemy drones to extract glacier data. Collect carbon-capturing power-ups, defeat global warming bosses, and unlock critical research data.
                 </p>
               </div>
               
