@@ -22,27 +22,14 @@ export async function registerRoutes(
         return res.json(existingGlaciers);
       }
 
-      // List of possible glaciers for variety
-      const glacierOptions = [
-        "Jakobshavn Isbræ (Greenland)", "Perito Moreno (Argentina)", "Great Aletsch (Switzerland)",
-        "Lambert (Antarctica)", "Vatnajökull (Iceland)", "Gangotri (India)", "Siachen (Kashmir)",
-        "Franz Josef (New Zealand)", "Mendenhall (Alaska)", "Furtwängler (Tanzania)",
-        "Pasterze (Austria)", "Mer de Glace (France)", "Jostedalsbreen (Norway)",
-        "Hubbard (Alaska)", "Fox Glacier (New Zealand)", "Baltoro (Pakistan)"
-      ];
-      
-      // Shuffle and pick 3 random glaciers to suggest
-      const shuffled = glacierOptions.sort(() => Math.random() - 0.5);
-      const suggestions = shuffled.slice(0, 6).join(", ");
-
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           { 
             role: "system", 
-            content: `You are a scientific research assistant. Provide authentic, real-world data for exactly 3 major global glaciers. Choose 3 different glaciers from these options: ${suggestions}. For each glacier, provide: name, iceThickness (meters), surfaceArea (sq km), stability (0-100), tempSensitivity (1-10), and a detailed 2-sentence description including its geographic location. Also provide realistic historical drill data: historicalTemp (5 values in Celsius, negative), co2Levels (5 values in ppm from 280-420), and layerStrength (5 values from 1-10). Respond ONLY with a JSON object containing a 'glaciers' array with exactly 3 glaciers.` 
+            content: `You are a scientific research assistant specializing in glaciology. Provide authentic, real-world telemetry for exactly 3 major glaciers currently existing on Earth. Do not use a pre-set list; instead, select any 3 significant glaciers from across the globe (e.g., in Antarctica, Greenland, the Himalayas, the Andes, the Alps, etc.). For each glacier, provide: name, iceThickness (meters), surfaceArea (sq km), stability (0-100), tempSensitivity (1-10), and a detailed 2-sentence description including its specific geographic coordinates and regional context. Also provide realistic historical drill data based on actual scientific records: historicalTemp (5 values in Celsius, negative), co2Levels (5 values in ppm from 280-420), and layerStrength (5 values from 1-10). Respond ONLY with a JSON object containing a 'glaciers' array with exactly 3 glaciers.` 
           },
-          { role: "user", content: `Fetch telemetry for 3 real glaciers. Seed: ${Date.now()}` }
+          { role: "user", content: `Establish satellite uplink and fetch telemetry for 3 unique real-world glaciers. Reference current climate data. Seed: ${Date.now()}` }
         ],
         response_format: { type: "json_object" }
       });
@@ -137,25 +124,14 @@ export async function registerRoutes(
     try {
       await storage.clearGlaciers();
       
-      const glacierOptions = [
-        "Jakobshavn Isbræ (Greenland)", "Perito Moreno (Argentina)", "Great Aletsch (Switzerland)",
-        "Lambert (Antarctica)", "Vatnajökull (Iceland)", "Gangotri (India)", "Siachen (Kashmir)",
-        "Franz Josef (New Zealand)", "Mendenhall (Alaska)", "Furtwängler (Tanzania)",
-        "Pasterze (Austria)", "Mer de Glace (France)", "Jostedalsbreen (Norway)",
-        "Hubbard (Alaska)", "Fox Glacier (New Zealand)", "Baltoro (Pakistan)"
-      ];
-      
-      const shuffled = glacierOptions.sort(() => Math.random() - 0.5);
-      const suggestions = shuffled.slice(0, 6).join(", ");
-
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           { 
             role: "system", 
-            content: `You are a scientific research assistant. Provide authentic, real-world data for exactly 3 major global glaciers. Choose 3 different glaciers from these options: ${suggestions}. For each glacier, provide: name, iceThickness (meters), surfaceArea (sq km), stability (0-100), tempSensitivity (1-10), and a detailed 2-sentence description including its geographic location. Also provide realistic historical drill data: historicalTemp (5 values in Celsius, negative), co2Levels (5 values in ppm from 280-420), and layerStrength (5 values from 1-10). Respond ONLY with a JSON object containing a 'glaciers' array with exactly 3 glaciers.` 
+            content: `You are a scientific research assistant specializing in glaciology. Provide authentic, real-world telemetry for exactly 3 major glaciers currently existing on Earth. Select any 3 significant glaciers from across the globe (e.g., in Antarctica, Greenland, the Himalayas, the Andes, the Alps, etc.). For each glacier, provide: name, iceThickness (meters), surfaceArea (sq km), stability (0-100), tempSensitivity (1-10), and a detailed 2-sentence description including its specific geographic coordinates and regional context. Also provide realistic historical drill data based on actual scientific records: historicalTemp (5 values in Celsius, negative), co2Levels (5 values in ppm from 280-420), and layerStrength (5 values from 1-10). Respond ONLY with a JSON object containing a 'glaciers' array with exactly 3 glaciers.` 
           },
-          { role: "user", content: `Fetch telemetry for 3 real glaciers. Seed: ${Date.now()}` }
+          { role: "user", content: `Establish satellite uplink and fetch telemetry for 3 unique real-world glaciers. Reference current climate data. Seed: ${Date.now()}` }
         ],
         response_format: { type: "json_object" }
       });
