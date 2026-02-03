@@ -111,7 +111,6 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
   const animationFrameRef = useRef<number>();
   const gameStateRef = useRef(gameState);
   const screenShakeRef = useRef(0);
-  const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [displayHealth, setDisplayHealth] = useState(100);
   const [displayShield, setDisplayShield] = useState(0);
   const [enemyCount, setEnemyCount] = useState(0);
@@ -357,7 +356,7 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
     
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: false });
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const player = playerRef.current;
@@ -368,14 +367,7 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
     const keys = keysRef.current;
     const mouse = mouseRef.current;
 
-    if (!offscreenCanvasRef.current) {
-      offscreenCanvasRef.current = document.createElement('canvas');
-      offscreenCanvasRef.current.width = CANVAS_WIDTH;
-      offscreenCanvasRef.current.height = CANVAS_HEIGHT;
-    }
-    const offCtx = offscreenCanvasRef.current.getContext('2d', { alpha: false });
-    if (!offCtx) return;
-
+    // Decrease weapon timer
     if (player.weaponTimer > 0) {
       player.weaponTimer--;
       if (player.weaponTimer === 0) {
@@ -384,140 +376,538 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
       }
     }
 
+    // Screen shake
     let shakeX = 0, shakeY = 0;
     if (screenShakeRef.current > 0) {
       shakeX = (Math.random() - 0.5) * screenShakeRef.current;
       shakeY = (Math.random() - 0.5) * screenShakeRef.current;
-      screenShakeRef.current *= 0.85;
-      if (screenShakeRef.current < 0.2) screenShakeRef.current = 0;
+      screenShakeRef.current *= 0.9;
+      if (screenShakeRef.current < 0.5) screenShakeRef.current = 0;
     }
 
-    offCtx.save();
-    offCtx.translate(shakeX, shakeY);
-    offCtx.fillStyle = '#020617';
-    offCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+
+    // Background with gradient
+    const bgGrad = ctx.createRadialGradient(CANVAS_WIDTH/2, CANVAS_HEIGHT/2, 0, CANVAS_WIDTH/2, CANVAS_HEIGHT/2, CANVAS_WIDTH);
+    bgGrad.addColorStop(0, '#0f172a');
+    bgGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     
+    // Animated grid
     const time = Date.now() * 0.001;
-    offCtx.strokeStyle = 'rgba(59, 130, 246, 0.05)';
-    offCtx.lineWidth = 1;
-    for (let i = 0; i < CANVAS_WIDTH; i += 50) {
-      offCtx.beginPath(); offCtx.moveTo(i, 0); offCtx.lineTo(i, CANVAS_HEIGHT); offCtx.stroke();
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.08)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < CANVAS_WIDTH; i += 40) {
+      const offset = Math.sin(time + i * 0.02) * 2;
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i + offset, CANVAS_HEIGHT);
+      ctx.stroke();
     }
-    for (let i = 0; i < CANVAS_HEIGHT; i += 50) {
-      offCtx.beginPath(); offCtx.moveTo(0, i); offCtx.lineTo(CANVAS_WIDTH, i); offCtx.stroke();
+    for (let i = 0; i < CANVAS_HEIGHT; i += 40) {
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(CANVAS_WIDTH, i);
+      ctx.stroke();
     }
 
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.dx; p.y += p.dy; p.life--; p.dy += 0.04;
-      if (p.life <= 0) { particles.splice(i, 1); continue; }
-      const alpha = p.life / p.maxLife;
-      offCtx.globalAlpha = alpha;
-      offCtx.fillStyle = p.color;
-      offCtx.beginPath(); offCtx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2); offCtx.fill();
+    // Floating ice particles in background
+    ctx.fillStyle = 'rgba(147, 197, 253, 0.3)';
+    for (let i = 0; i < 20; i++) {
+      const px = (Math.sin(time * 0.5 + i * 50) * 0.5 + 0.5) * CANVAS_WIDTH;
+      const py = ((time * 10 + i * 30) % CANVAS_HEIGHT);
+      ctx.beginPath();
+      ctx.arc(px, py, 1 + Math.sin(i) * 0.5, 0, Math.PI * 2);
+      ctx.fill();
     }
-    offCtx.globalAlpha = 1;
 
+    // Calculate angle to mouse
     player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+
+    // Player movement with smoothing
     const moveSpeed = player.speed;
     if (keys['w'] || keys['arrowup']) player.y = Math.max(30, player.y - moveSpeed);
     if (keys['s'] || keys['arrowdown']) player.y = Math.min(CANVAS_HEIGHT - 30, player.y + moveSpeed);
     if (keys['a'] || keys['arrowleft']) player.x = Math.max(30, player.x - moveSpeed);
     if (keys['d'] || keys['arrowright']) player.x = Math.min(CANVAS_WIDTH - 30, player.x + moveSpeed);
 
-    if (mouse.shooting || keys[' ']) shootBullet();
+    // Shooting
+    if (mouse.shooting || keys[' ']) {
+      shootBullet();
+    }
 
-    const now = Date.now();
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.dx;
+      p.y += p.dy;
+      p.life--;
+      p.dy += 0.05; // Gravity
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Update power-ups
     for (let i = powerUps.length - 1; i >= 0; i--) {
       const pu = powerUps[i];
-      pu.y += 0.5; pu.life--;
-      if (Math.hypot(pu.x - player.x, pu.y - player.y) < 30) {
-        if (pu.type === 'health') { player.health = Math.min(player.maxHealth, player.health + 30); setDisplayHealth(player.health); }
-        else if (pu.type === 'shield') { player.shield = Math.min(100, player.shield + 30); setDisplayShield(player.shield); }
-        else { player.weaponType = pu.type as any; player.weaponTimer = 500; setCurrentWeapon(pu.type.toUpperCase()); }
+      pu.y += 0.5;
+      pu.life--;
+      
+      // Check collision with player
+      const dx = pu.x - player.x;
+      const dy = pu.y - player.y;
+      if (dx * dx + dy * dy < 900) {
+        switch (pu.type) {
+          case 'health':
+            player.health = Math.min(player.maxHealth, player.health + 30);
+            setDisplayHealth(player.health);
+            break;
+          case 'shield':
+            player.shield = Math.min(100, player.shield + 30);
+            setDisplayShield(player.shield);
+            break;
+          case 'spread':
+            player.weaponType = 'spread';
+            player.weaponTimer = 600;
+            setCurrentWeapon('SPREAD');
+            break;
+          case 'laser':
+            player.weaponType = 'laser';
+            player.weaponTimer = 500;
+            setCurrentWeapon('LASER');
+            break;
+          case 'explosive':
+            player.weaponType = 'explosive';
+            player.weaponTimer = 400;
+            setCurrentWeapon('EXPLOSIVE');
+            break;
+          case 'speed':
+            player.speed += 1;
+            setTimeout(() => { player.speed -= 1; }, 10000);
+            break;
+        }
         createIceShards(pu.x, pu.y);
-        powerUps.splice(i, 1); continue;
+        powerUps.splice(i, 1);
+        continue;
       }
+      
       if (pu.life <= 0 || pu.y > CANVAS_HEIGHT) powerUps.splice(i, 1);
     }
 
+    // Update bullets
+    const now = Date.now();
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
-      b.x += b.dx; b.y += b.dy;
-      if (b.y < -10 || b.y > CANVAS_HEIGHT + 10 || b.x < -10 || b.x > CANVAS_WIDTH + 10) bullets.splice(i, 1);
-    }
-
-    for (const e of enemies) {
-      if (e.type === 'boss') {
-        e.angle = (e.angle || 0) + 0.02;
-        e.x = CANVAS_WIDTH / 2 + Math.sin(e.angle) * 150;
-        if (now - (e.lastShot || 0) > 600) {
-          const a = Math.atan2(player.y - e.y, player.x - e.x);
-          for (let j = -1; j <= 1; j++) bullets.push({ x: e.x, y: e.y + 40, dx: Math.cos(a + j * 0.2) * 5, dy: Math.sin(a + j * 0.2) * 5, isEnemy: true, size: 5 });
-          e.lastShot = now;
-        }
-      } else {
-        const d = Math.hypot(player.x - e.x, player.y - e.y);
-        if (d > 0) { e.x += (player.x - e.x) / d * e.speed * 0.4; e.y += (player.y - e.y) / d * e.speed * 0.4; }
+      b.x += b.dx;
+      b.y += b.dy;
+      
+      // Trail particles for special bullets
+      if (b.type === 'laser' && Math.random() > 0.5) {
+        particles.push({
+          x: b.x, y: b.y,
+          dx: (Math.random() - 0.5) * 2,
+          dy: (Math.random() - 0.5) * 2,
+          life: 15,
+          maxLife: 15,
+          color: '#a855f7',
+          size: 2,
+          type: 'trail'
+        });
+      }
+      
+      if (b.y < -10 || b.y > CANVAS_HEIGHT + 10 || b.x < -10 || b.x > CANVAS_WIDTH + 10) {
+        bullets.splice(i, 1);
       }
     }
 
-    for (const pu of powerUps) {
-      offCtx.fillStyle = pu.type === 'health' ? '#22c55e' : '#3b82f6';
-      offCtx.beginPath(); offCtx.arc(pu.x, pu.y, 10, 0, Math.PI * 2); offCtx.fill();
+    // Update enemies
+    for (const enemy of enemies) {
+      if (enemy.type === 'boss') {
+        enemy.angle = (enemy.angle || 0) + 0.02;
+        enemy.x = CANVAS_WIDTH / 2 + Math.sin(enemy.angle) * 150;
+        enemy.y = 80 + Math.sin(enemy.angle * 2) * 20;
+        
+        if (now - (enemy.lastShot || 0) > 600) {
+          const angleToPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+          for (let i = -2; i <= 2; i++) {
+            bullets.push({
+              x: enemy.x,
+              y: enemy.y + 40,
+              dx: Math.cos(angleToPlayer + i * 0.2) * 5,
+              dy: Math.sin(angleToPlayer + i * 0.2) * 5,
+              isEnemy: true,
+              size: 5
+            });
+          }
+          enemy.lastShot = now;
+        }
+      } else if (enemy.type === 'sniper') {
+        if (now - (enemy.lastShot || 0) > 2000) {
+          const angleToPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+          bullets.push({
+            x: enemy.x,
+            y: enemy.y,
+            dx: Math.cos(angleToPlayer) * 10,
+            dy: Math.sin(angleToPlayer) * 10,
+            isEnemy: true,
+            size: 4
+          });
+          enemy.lastShot = now;
+        }
+      } else {
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0) {
+          enemy.x += (dx / dist) * enemy.speed * (enemy.type === 'swarm' ? 0.8 : 0.4);
+          enemy.y += (dy / dist) * enemy.speed * (enemy.type === 'swarm' ? 0.6 : 0.25);
+        }
+      }
     }
 
-    for (const b of bullets) {
-      offCtx.fillStyle = b.isEnemy ? '#ef4444' : '#22d3ee';
-      offCtx.beginPath(); offCtx.arc(b.x, b.y, b.size || 4, 0, Math.PI * 2); offCtx.fill();
-    }
-
-    offCtx.save(); offCtx.translate(player.x, player.y); offCtx.rotate(player.angle);
-    offCtx.fillStyle = '#06b6d4';
-    offCtx.beginPath(); offCtx.moveTo(15, 0); offCtx.lineTo(-10, 10); offCtx.lineTo(-10, -10); offCtx.closePath(); offCtx.fill();
-    if (player.shield > 0) { offCtx.strokeStyle = '#3b82f6'; offCtx.lineWidth = 2; offCtx.beginPath(); offCtx.arc(0, 0, 20, 0, Math.PI * 2); offCtx.stroke(); }
-    offCtx.restore();
-
-    for (const e of enemies) {
-      offCtx.fillStyle = e.type === 'boss' ? '#dc2626' : '#3b82f6';
-      offCtx.beginPath(); offCtx.arc(e.x, e.y, e.type === 'boss' ? 35 : 15, 0, Math.PI * 2); offCtx.fill();
-    }
-
-    offCtx.restore();
-    ctx.drawImage(offscreenCanvasRef.current, 0, 0);
-
+    // Collision: player bullets vs enemies
     let killThisFrame = false;
     for (let bi = bullets.length - 1; bi >= 0; bi--) {
       const b = bullets[bi];
-      if (!b.isEnemy) {
-        for (let ei = enemies.length - 1; ei >= 0; ei--) {
-          const e = enemies[ei];
-          if (Math.hypot(b.x - e.x, b.y - e.y) < (e.type === 'boss' ? 40 : 20)) {
-            e.health -= player.damage;
-            bullets.splice(bi, 1);
-            if (e.health <= 0) {
-              killThisFrame = true;
-              setScore(s => s + 50); setCredits(c => c + 20);
-              createExplosion(e.x, e.y, '#ef4444');
-              enemies.splice(ei, 1);
-              setEnemyCount(enemies.length);
+      if (b.isEnemy) continue;
+      
+      for (let ei = enemies.length - 1; ei >= 0; ei--) {
+        const e = enemies[ei];
+        const dx = b.x - e.x;
+        const dy = b.y - e.y;
+        const hitRadius = e.type === 'boss' ? 45 : e.type === 'tank' ? 22 : 16;
+        
+        if (dx * dx + dy * dy < hitRadius * hitRadius) {
+          let damage = player.damage;
+          if (b.type === 'laser') damage *= 1.5;
+          if (b.type === 'explosive') {
+            damage *= 0.8;
+            createExplosion(b.x, b.y, '#f97316', 20);
+            screenShakeRef.current = 8;
+            // Splash damage
+            for (const other of enemies) {
+              if (other === e) continue;
+              const odx = b.x - other.x;
+              const ody = b.y - other.y;
+              if (odx * odx + ody * ody < 4000) {
+                other.health -= damage * 0.5;
+              }
             }
-            break;
           }
-        }
-      } else {
-        if (Math.hypot(b.x - player.x, b.y - player.y) < 20) {
-          player.health -= 10; setDisplayHealth(player.health);
-          screenShakeRef.current = 5;
+          
+          e.health -= damage;
+          createExplosion(b.x, b.y, e.type === 'boss' ? '#dc2626' : '#f59e0b', 8);
           bullets.splice(bi, 1);
+          
+          if (e.health <= 0) {
+            killThisFrame = true;
+            const points = e.type === 'boss' ? 150 : e.type === 'tank' ? 25 : e.type === 'sniper' ? 30 : 12;
+            const comboBonus = Math.floor(combo * 0.5);
+            setScore(s => s + points + comboBonus);
+            setCredits(c => c + points);
+            setCombo(c => c + 1);
+            setShowCombo(true);
+            setTimeout(() => setShowCombo(false), 500);
+            
+            createExplosion(e.x, e.y, e.type === 'boss' ? '#dc2626' : '#a855f7', 20);
+            createIceShards(e.x, e.y);
+            screenShakeRef.current = e.type === 'boss' ? 15 : 5;
+            spawnPowerUp(e.x, e.y);
+            
+            enemies.splice(ei, 1);
+            setEnemyCount(enemies.length);
+          }
+          break;
         }
       }
     }
 
-    if (player.health <= 0) { setGameState('gameover'); return; }
+    // Reset combo if no kills this frame (with decay)
+    if (!killThisFrame && combo > 0) {
+      // Decay combo slowly
+    }
+
+    // Collision: enemy bullets vs player
+    for (let bi = bullets.length - 1; bi >= 0; bi--) {
+      const b = bullets[bi];
+      if (!b.isEnemy) continue;
+      
+      const dx = b.x - player.x;
+      const dy = b.y - player.y;
+      if (dx * dx + dy * dy < 500) {
+        let dmg = 12;
+        if (player.shield > 0) {
+          const absorbed = Math.min(player.shield, dmg);
+          player.shield -= absorbed;
+          dmg -= absorbed;
+          setDisplayShield(player.shield);
+        }
+        player.health -= dmg;
+        setDisplayHealth(Math.max(0, player.health));
+        screenShakeRef.current = 6;
+        createExplosion(b.x, b.y, '#ef4444', 6);
+        bullets.splice(bi, 1);
+        setCombo(0);
+      }
+    }
+
+    // Collision: enemies vs player
+    for (const e of enemies) {
+      const dx = e.x - player.x;
+      const dy = e.y - player.y;
+      const hitDist = e.type === 'boss' ? 55 : 35;
+      if (dx * dx + dy * dy < hitDist * hitDist) {
+        let dmg = 0.3;
+        if (player.shield > 0) {
+          const absorbed = Math.min(player.shield, dmg);
+          player.shield -= absorbed;
+          dmg -= absorbed;
+          setDisplayShield(Math.max(0, player.shield));
+        }
+        player.health -= dmg;
+        setDisplayHealth(Math.max(0, Math.floor(player.health)));
+      }
+    }
+
+    // Draw aiming line
+    ctx.strokeStyle = 'rgba(34, 211, 238, 0.25)';
+    ctx.setLineDash([8, 8]);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(
+      player.x + Math.cos(player.angle) * 120,
+      player.y + Math.sin(player.angle) * 120
+    );
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw particles
+    for (const p of particles) {
+      const alpha = p.life / p.maxLife;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Draw power-ups
+    for (const pu of powerUps) {
+      const pulse = 1 + Math.sin(Date.now() * 0.01) * 0.2;
+      ctx.save();
+      ctx.translate(pu.x, pu.y);
+      ctx.scale(pulse, pulse);
+      
+      const colors: { [key: string]: string } = {
+        health: '#22c55e',
+        shield: '#3b82f6',
+        spread: '#f59e0b',
+        laser: '#a855f7',
+        explosive: '#ef4444',
+        speed: '#06b6d4'
+      };
+      
+      ctx.fillStyle = colors[pu.type] || '#fff';
+      ctx.shadowColor = colors[pu.type] || '#fff';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(0, 0, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(pu.type[0].toUpperCase(), 0, 0);
+      ctx.restore();
+    }
+
+    // Draw player with glow
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.angle + Math.PI / 2);
+    
+    // Shield effect
+    if (player.shield > 0) {
+      ctx.strokeStyle = `rgba(59, 130, 246, ${0.3 + Math.sin(Date.now() * 0.01) * 0.2})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 25, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    
+    // Ship glow
+    ctx.shadowColor = player.weaponType === 'laser' ? '#a855f7' : player.weaponType === 'spread' ? '#f59e0b' : '#3b82f6';
+    ctx.shadowBlur = 20;
+    
+    // Ship body
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath();
+    ctx.moveTo(0, -18);
+    ctx.lineTo(-14, 14);
+    ctx.lineTo(0, 8);
+    ctx.lineTo(14, 14);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Engine glow
+    ctx.fillStyle = '#22d3ee';
+    ctx.beginPath();
+    ctx.moveTo(-6, 10);
+    ctx.lineTo(0, 18 + Math.sin(Date.now() * 0.02) * 4);
+    ctx.lineTo(6, 10);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // Draw crosshair
+    ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 12, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(mouse.x - 18, mouse.y);
+    ctx.lineTo(mouse.x - 6, mouse.y);
+    ctx.moveTo(mouse.x + 6, mouse.y);
+    ctx.lineTo(mouse.x + 18, mouse.y);
+    ctx.moveTo(mouse.x, mouse.y - 18);
+    ctx.lineTo(mouse.x, mouse.y - 6);
+    ctx.moveTo(mouse.x, mouse.y + 6);
+    ctx.lineTo(mouse.x, mouse.y + 18);
+    ctx.stroke();
+    
+    // Center dot
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw bullets
+    for (const b of bullets) {
+      if (b.type === 'laser') {
+        ctx.fillStyle = '#a855f7';
+        ctx.shadowColor = '#a855f7';
+        ctx.shadowBlur = 10;
+      } else if (b.type === 'explosive') {
+        ctx.fillStyle = '#f97316';
+        ctx.shadowColor = '#f97316';
+        ctx.shadowBlur = 8;
+      } else {
+        ctx.fillStyle = b.isEnemy ? '#ef4444' : '#22d3ee';
+        ctx.shadowColor = b.isEnemy ? '#ef4444' : '#22d3ee';
+        ctx.shadowBlur = 6;
+      }
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.size || 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    // Draw enemies
+    for (const e of enemies) {
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      
+      if (e.type === 'boss') {
+        // Boss with rotating core
+        ctx.rotate(Date.now() * 0.002);
+        ctx.fillStyle = '#7f1d1d';
+        ctx.beginPath();
+        ctx.arc(0, 0, 40, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#dc2626';
+        for (let i = 0; i < 6; i++) {
+          ctx.save();
+          ctx.rotate(i * Math.PI / 3);
+          ctx.beginPath();
+          ctx.arc(25, 0, 10, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        
+        ctx.fillStyle = '#fca5a5';
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Health bar
+        ctx.rotate(-Date.now() * 0.002);
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(-45, -55, 90, 10);
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(-45, -55, 90 * (e.health / e.maxHealth), 10);
+        ctx.strokeStyle = '#374151';
+        ctx.strokeRect(-45, -55, 90, 10);
+      } else if (e.type === 'tank') {
+        ctx.fillStyle = '#b45309';
+        ctx.beginPath();
+        ctx.arc(0, 0, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(0, 0, 12, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (e.type === 'sniper') {
+        ctx.fillStyle = '#166534';
+        ctx.beginPath();
+        ctx.moveTo(0, -16);
+        ctx.lineTo(-12, 12);
+        ctx.lineTo(12, 12);
+        ctx.closePath();
+        ctx.fill();
+        // Targeting laser
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(player.x - e.x, player.y - e.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (e.type === 'swarm') {
+        ctx.fillStyle = '#7c3aed';
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (i / 6) * Math.PI * 2 + Date.now() * 0.005;
+          const r = 10;
+          if (i === 0) ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+          else ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillStyle = '#a855f7';
+        ctx.beginPath();
+        ctx.arc(0, 0, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#c084fc';
+        ctx.beginPath();
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      ctx.restore();
+    }
+
+    ctx.restore(); // End screen shake
+
+    // Check win/lose
+    if (player.health <= 0) {
+      setGameState('gameover');
+      return;
+    }
+
     if (enemies.length === 0) {
-      const isBossLevel = level % 3 === 0;
-      if (isBossLevel && level >= 9) {
+      const currentLevel = level;
+      const isBossLevel = currentLevel % 3 === 0;
+      if (isBossLevel && currentLevel >= 9) {
         setUnlockedData({ temp: true, co2: true, strength: true, full: true });
         setGameState('victory');
         onComplete?.();
@@ -680,7 +1070,7 @@ export function IceDrillShooter({ glacier, onComplete }: IceDrillShooterProps) {
                   </span>
                 </h2>
                 <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
-                  Fight through carbon dioxide-emitting enemy drones to extract glacier data. Collect carbon-capturing power-ups, defeat global warming bosses, and unlock critical research data.
+                  Fight through enemy drones to extract glacier data. Collect power-ups, defeat bosses, and unlock critical research data.
                 </p>
               </div>
               
