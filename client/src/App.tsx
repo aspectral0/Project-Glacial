@@ -1,5 +1,4 @@
-import { Switch, Route } from "wouter";
-import { useLocation } from "wouter";
+import { Switch, Route, Router as WouterRouter } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -16,9 +15,9 @@ function Router() {
   return (
     <div className="flex-1 w-full flex flex-col">
       <Switch>
-        <Route path={`${basePath}/`} component={SelectGlacier} />
-        <Route path={`${basePath}/simulate/:id`} component={Simulation} />
-        <Route path={`${basePath}/results`} component={Results} />
+        <Route path="/" component={SelectGlacier} />
+        <Route path="/simulate/:id" component={Simulation} />
+        <Route path="/results" component={Results} />
         <Route component={NotFound} />
       </Switch>
     </div>
