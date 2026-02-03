@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project Glacial</title>
+    <script>
+        // Redirect to the root index.html for SPA routing
+        // This handles GitHub Pages routing for single-page applications
+        var path = decodeURIComponent(window.location.pathname);
+        
+        // Get the base path (e.g., /Project-Glacial/ or /)
+        var base = path.split('/').filter(Boolean)[0];
+        var basePath = base ? '/' + base + '/' : '/';
+        
+        // Redirect to index with the intended path as a query parameter
+        window.location.replace(basePath + '?redirect=' + encodeURIComponent(path.replace(basePath, '')));
+    </script>
+</head>
+<body>
+    Redirecting...
+</body>
+</html>
