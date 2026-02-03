@@ -4,6 +4,10 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 export default defineConfig({
+  // IMPORTANT: change this to your GitHub repo name
+  // Example: "/Project-Glacial/"
+  base: "/Project-Glacial/",
+
   plugins: [
     react(),
     runtimeErrorOverlay(),
